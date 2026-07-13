@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidation des Stocks par Mapping</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        .table-container { max-height: calc(100vh - 320px); }
+        th, td { white-space: nowrap; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-6">
+        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-amber-500">Consolidation d'Inventaire par Mapping</h1>
+                <p class="text-sm text-slate-400">Agrégation automatique des articles pour éliminer les écarts fictifs inter-codes</p>
+            </div>
+            <div id="exportBtnContainer" class="hidden">
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Télécharger en Excel (.xlsx)
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm relative">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">1. Fichier de Mapping (Liste des produits)</label>
+                <input type="file" id="fileMapping" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-amber-400 hover:file:bg-slate-600 cursor-pointer"/>
+                <span id="statusMapping" class="text-xs text-amber-500 mt-2 block">En attente du fichier...</span>
+            </div>
+
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm relative">
+                <label class="block text-sm font-semibold text-slate-300 mb-2">2. Fichier d'Inventaire (Résultats Chariot...)</label>
+                <input type="file" id="fileInventory" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-amber-400 hover:file:bg-slate-600 cursor-pointer"/>
+                <span id="statusInventory" class="text-xs text-amber-500 mt-2 block">En attente du fichier...</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6">
+            <div class="w-full md:w-1/3">
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Rechercher un Mapping (ex: BATONNET, CORNET...)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 disabled:opacity-50" disabled>
+            </div>
+            <button id="processBtn" onclick="processFiles()" class="w-full md:w-auto bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold px-6 py-2 rounded-lg shadow transition disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                Lancer la Consolidation
+            </button>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
+            <div class="table-container overflow-auto">
+                <table id="resultTable" class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-950 text-slate-300 sticky top-0 z-10 font-semibold border-b border-slate-700">
+                        <tr class="border-b border-slate-800 text-center text-amber-400">
+                            <th colspan="4" class="p-2 border-r border-slate-800">GÉNÉRAL</th>
+                            <th colspan="4" class="p-2 border-r border-slate-800">ENTRÉES / SORTIES (QTE)</th>
+                            <th colspan="2" class="p-2 border-r border-slate-800">STOCK THÉORIQUE</th>
+                            <th colspan="2" class="p-2 border-r border-slate-800">STOCK PHYSIQUE</th>
+                            <th colspan="3" class="p-2 border-r border-slate-800">ÉCARTS & MATIÈRE</th>
+                            <th colspan="3" class="p-2 border-r border-slate-800">CHIFFRE D'AFFAIRES</th>
+                            <th colspan="2" class="p-2">CONSOMMATION RÉELLE</th>
+                        </tr>
+                        <tr class="bg-slate-900 text-slate-200">
+                            <th class="p-2 border-r border-slate-800">Code (Réf)</th>
+                            <th class="p-2 border-r border-slate-800 min-w-[200px]">Désignation Mapping</th>
+                            <th class="p-2 border-r border-slate-800 text-center">Nature</th>
+                            <th class="p-2 border-r border-slate-800 text-right">PUMP</th>
+                            <th class="p-2 text-right">Stk Init</th>
+                            <th class="p-2 text-right">Achats</th>
+                            <th class="p-2 text-right">Transf In</th>
+                            <th class="p-2 border-r border-slate-800 text-right">Transf Out</th>
+                            <th class="p-2 text-right">Consom.</th>
+                            <th class="p-2 border-r border-slate-800 text-right">Démarque</th>
+                            <th class="p-2 text-right">Qté Théo</th>
+                            <th class="p-2 border-r border-slate-800 text-right">Val Théo</th>
+                            <th class="p-2 text-right">Qté Phys</th>
+                            <th class="p-2 border-r border-slate-800 text-right">Val Phys</th>
+                            <th class="p-2 text-right text-slate-400">Val Mat. Vendu</th>
+                            <th class="p-2 text-right font-bold text-white">Ecart Qté</th>
+                            <th class="p-2 border-r border-slate-800 text-right font-bold text-white">Ecart Val</th>
+                            <th class="p-2 text-right">Qté CA</th>
+                            <th class="p-2 text-right">CA TTC</th>
+                            <th class="p-2 border-r border-slate-800 text-right">CA HT</th>
+                            <th class="p-2 text-right">Qté Réel</th>
+                            <th class="p-2 text-right">Val Réel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-800 font-mono text-slate-300">
+                        <tr>
+                            <td colspan="22" class="text-center py-12 text-slate-500 font-sans">
+                                Veuillez importer vos deux fichiers pour générer le tableau consolidé.
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="tableFoot" class="bg-slate-950 font-mono font-bold text-amber-400 sticky bottom-0 hidden">
+                        </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mappingData = {};
+        let rawInventory = [];
+        let consolidatedList = [];
+        let file1Ready = false;
+        let file2Ready = false;
+
+        // Lecture du fichier Mapping
+        document.getElementById('fileMapping').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                
+                // Recherche dynamique de la ligne d'en-tête (cherche "CODE ARTICLE" ou "Mapping")
+                let headerIdx = -1;
+                for (let i = 0; i < Math.min(10, json.length); i++) {
+                    if (json[i] && json[i].some(cell => String(cell).toUpperCase().includes('CODE ARTICLE') || String(cell).toUpperCase().includes('MAPPING'))) {
+                        headerIdx = i;
+                        break;
+                    }
+                }
+                
+                if (headerIdx === -1) headerIdx = 3; // Par défaut ligne 4 (index 3) selon votre structure
+
+                const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
+                const codeIdx = headers.findIndex(h => h.includes('CODE'));
+                const mapIdx = headers.findIndex(h => h.includes('MAPPING'));
+                const nomIdx = headers.findIndex(h => h.includes('NOM'));
+
+                mappingData = {};
+                for (let i = headerIdx + 1; i < json.length; i++) {
+                    const row = json[i];
+                    if (row && row[codeIdx] !== undefined) {
+                        const code = String(row[codeIdx]).trim();
+                        const mapping = row[mapIdx] ? String(row[mapIdx]).trim() : (row[nomIdx] ? String(row[nomIdx]).trim() : "SANS MAPPING");
+                        mappingData[code] = mapping;
+                    }
+                }
+
+                file1Ready = true;
+                document.getElementById('statusMapping').innerText = `✔ Mapping chargé (${Object.keys(mappingData).length} codes articles référencés)`;
+                document.getElementById('statusMapping').className = "text-xs text-emerald-400 mt-2 block font-semibold";
+                checkReady();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Lecture du fichier Inventaire
+        document.getElementById('fileInventory').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+                // Repérer le début des données (après la ligne des symboles x, a, b, c...)
+                let startRow = -1;
+                for (let i = 0; i < Math.min(15, json.length); i++) {
+                    if (json[i] && (json[i][0] === 'x' || json[i][4] === 'x' || String(json[i][0]).toLowerCase().includes('code'))) {
+                        startRow = i + 1;
+                    }
+                }
+                if (startRow === -1) startRow = 4; // Par défaut ligne 5 (index 4)
+
+                rawInventory = json.slice(startRow).filter(row => row && row.length > 2 && row[0] !== undefined);
+                
+                file2Ready = true;
+                document.getElementById('statusInventory').innerText = `✔ Inventaire chargé (${rawInventory.length} lignes à consolider)`;
+                document.getElementById('statusInventory').className = "text-xs text-emerald-400 mt-2 block font-semibold";
+                checkReady();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function checkReady() {
+            if (file1Ready && file2Ready) {
+                document.getElementById('processBtn').disabled = false;
+            }
+        }
+
+        function processFiles() {
+            const grouped = {};
+
+            rawInventory.forEach(row => {
+                const code = String(row[0] || '').trim();
+                const nature = String(row[2] || '').trim();
+                
+                // Trouve le nom du mapping, sinon conserve la désignation d'origine
+                const mapName = mappingData[code] || String(row[1] || 'ARTICLE SANS MAPPING').trim();
+                
+                if (!grouped[mapName]) {
+                    grouped[mapName] = {
+                        codeRef: code, // Garde un code d'exemple ou un identifiant
+                        nature: nature,
+                        stkInit: 0, achats: 0, transfIn: 0, transfOut: 0, consom: 0, demarque: 0,
+                        qteTheo: 0, valTheo: 0, qtePhys: 0, valPhys: 0,
+                        valMatVendu: 0, ecartQte: 0, ecartVal: 0,
+                        qteCA: 0, caTTC: 0, caHT: 0, qteReel: 0, valReel: 0
+                    };
+                }
+
+                const g = grouped[mapName];
+                // Fonctions sécurisées pour additionner les nombres flottants
+                const num = (idx) => parseFloat(row[idx]) || 0;
+
+                g.stkInit += num(4);
+                g.achats += num(5);
+                g.transfIn += num(6);
+                g.transfOut += num(7);
+                g.consom += num(8);
+                g.demarque += num(9);
+                g.qteTheo += num(10);
+                g.valTheo += num(11);
+                g.qtePhys += num(12);
+                g.valPhys += num(13);
+                g.valMatVendu += num(14);
+                g.ecartQte += num(15);
+                g.ecartVal += num(16);
+                g.qteCA += num(17);
+                g.caTTC += num(18);
+                g.caHT += num(19);
+                g.qteReel += num(20);
+                g.valReel += num(21);
+            });
+
+            // Conversion en tableau et calcul du PUMP moyen pondéré par mapping
+            consolidatedList = Object.keys(grouped).map(key => {
+                const item = grouped[key];
+                // Recalcul logique du PUMP : Valeur Théorique / Quantité Théorique (ou Val Phys / Qté Phys)
+                let pump = 0;
+                if (item.qteTheo !== 0) {
+                    pump = item.valTheo / item.qteTheo;
+                } else if (item.qtePhys !== 0) {
+                    pump = item.valPhys / item.qtePhys;
+                }
+                return { name: key, ...item, pump: pump };
+            });
+
+            // Tri alphabétique par Mapping
+            consolidatedList.sort((a, b) => a.name.localeCompare(b.name));
+
+            renderTable(consolidatedList);
+            document.getElementById('exportBtnContainer').classList.remove('hidden');
+            document.getElementById('searchInput').disabled = false;
+        }
+
+        function fmt(num, decimals = 2) {
+            if (num === 0 || isNaN(num)) return "0.00";
+            return Number(num).toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            const tfoot = document.getElementById('tableFoot');
+            tbody.innerHTML = '';
+
+            let tot = {
+                stkInit: 0, achats: 0, transfIn: 0, transfOut: 0, consom: 0, demarque: 0,
+                qteTheo: 0, valTheo: 0, qtePhys: 0, valPhys: 0, valMatVendu: 0,
+                ecartQte: 0, ecartVal: 0, qteCA: 0, caTTC: 0, caHT: 0, qteReel: 0, valReel: 0
+            };
+
+            data.forEach((row, index) => {
+                // Cumul des totaux
+                Object.keys(tot).forEach(k => tot[k] += (row[k] || 0));
+
+                // Coloration conditionnelle des écarts (vert = parfait, rouge = perte, bleu = excédent)
+                let ecartClass = "text-slate-300";
+                if (row.ecartQte < -0.01) ecartClass = "text-rose-500 font-bold bg-rose-950/30";
+                else if (row.ecartQte > 0.01) ecartClass = "text-sky-400 font-bold bg-sky-950/30";
+                else ecartClass = "text-emerald-400 font-bold";
+
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? "bg-slate-900/50 hover:bg-slate-800" : "bg-slate-850 hover:bg-slate-800";
+                tr.innerHTML = `
+                    <td class="p-2 border-r border-slate-800 text-slate-500">${row.codeRef}</td>
+                    <td class="p-2 border-r border-slate-800 font-sans font-bold text-amber-400">${row.name}</td>
+                    <td class="p-2 border-r border-slate-800 text-center text-slate-400">${row.nature}</td>
+                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.pump)}</td>
+                    <td class="p-2 text-right">${fmt(row.stkInit)}</td>
+                    <td class="p-2 text-right">${fmt(row.achats)}</td>
+                    <td class="p-2 text-right">${fmt(row.transfIn)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.transfOut)}</td>
+                    <td class="p-2 text-right">${fmt(row.consom)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.demarque)}</td>
+                    <td class="p-2 text-right font-semibold">${fmt(row.qteTheo)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.valTheo)}</td>
+                    <td class="p-2 text-right font-semibold text-white">${fmt(row.qtePhys)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.valPhys)}</td>
+                    <td class="p-2 text-right text-slate-500">${fmt(row.valMatVendu)}</td>
+                    <td class="p-2 text-right ${ecartClass}">${fmt(row.ecartQte)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right ${ecartClass}">${fmt(row.ecartVal)}</td>
+                    <td class="p-2 text-right">${fmt(row.qteCA)}</td>
+                    <td class="p-2 text-right">${fmt(row.caTTC)}</td>
+                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.caHT)}</td>
+                    <td class="p-2 text-right">${fmt(row.qteReel)}</td>
+                    <td class="p-2 text-right">${fmt(row.valReel)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Affichage de la ligne des Totaux
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="4" class="p-3 border-r border-slate-800 text-right font-sans uppercase tracking-wider text-white">Total Général</td>
+                    <td class="p-3 text-right">${fmt(tot.stkInit)}</td>
+                    <td class="p-3 text-right">${fmt(tot.achats)}</td>
+                    <td class="p-3 text-right">${fmt(tot.transfIn)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.transfOut)}</td>
+                    <td class="p-3 text-right">${fmt(tot.consom)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.demarque)}</td>
+                    <td class="p-3 text-right text-white">${fmt(tot.qteTheo)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.valTheo)}</td>
+                    <td class="p-3 text-right text-white">${fmt(tot.qtePhys)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.valPhys)}</td>
+                    <td class="p-3 text-right">${fmt(tot.valMatVendu)}</td>
+                    <td class="p-3 text-right ${tot.ecartQte < 0 ? 'text-rose-500' : 'text-emerald-400'}">${fmt(tot.ecartQte)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right ${tot.ecartVal < 0 ? 'text-rose-500' : 'text-emerald-400'}">${fmt(tot.ecartVal)}</td>
+                    <td class="p-3 text-right">${fmt(tot.qteCA)}</td>
+                    <td class="p-3 text-right">${fmt(tot.caTTC)}</td>
+                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.caHT)}</td>
+                    <td class="p-3 text-right">${fmt(tot.qteReel)}</td>
+                    <td class="p-3 text-right">${fmt(tot.valReel)}</td>
+                </tr>
+            `;
+            tfoot.classList.remove('hidden');
+        }
+
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toUpperCase();
+            const filtered = consolidatedList.filter(item => item.name.toUpperCase().includes(query));
+            renderTable(filtered);
+        }
+
+        function exportToExcel() {
+            // Préparation des données pour l'export Excel au même format que l'inventaire d'origine
+            const exportData = consolidatedList.map(row => ({
+                "Code (Réf)": row.codeRef,
+                "Désignation Mapping": row.name,
+                "Nature": row.nature,
+                "Pump/Coût de revient": Number(row.pump.toFixed(4)),
+                "Stock initiale": Number(row.stkInit.toFixed(2)),
+                "Achats": Number(row.achats.toFixed(2)),
+                "Transferts in": Number(row.transfIn.toFixed(2)),
+                "Transferts out": Number(row.transfOut.toFixed(2)),
+                "Consomation": Number(row.consom.toFixed(2)),
+                "Démarque": Number(row.demarque.toFixed(2)),
+                "Stock final théorique (Qté)": Number(row.qteTheo.toFixed(2)),
+                "Stock final théorique (Val)": Number(row.valTheo.toFixed(2)),
+                "Stock physique (Qté)": Number(row.qtePhys.toFixed(2)),
+                "Stock physique (Val)": Number(row.valPhys.toFixed(2)),
+                "Valeur Matière du quantité Vendu": Number(row.valMatVendu.toFixed(2)),
+                "Ecart (Qté)": Number(row.ecartQte.toFixed(2)),
+                "Ecart (Val)": Number(row.ecartVal.toFixed(2)),
+                "CA (Qté)": Number(row.qteCA.toFixed(2)),
+                "CA TTC": Number(row.caTTC.toFixed(2)),
+                "CA HT": Number(row.caHT.toFixed(2)),
+                "Consomation réel (Qté)": Number(row.qteReel.toFixed(2)),
+                "Consomation réel (Val)": Number(row.valReel.toFixed(2))
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Inventaire Consolidé");
+            
+            // Générer le fichier et déclencher le téléchargement
+            const dateStr = new Date().toISOString().slice(0,10);
+            XLSX.writeFile(workbook, `Inventaire_Consolide_Mapping_${dateStr}.xlsx`);
+        }
+    </script>
+</body>
+</html>
