@@ -141,6 +141,7 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            max-height: 600px;
         }
 
         table {
@@ -164,13 +165,19 @@
             position: sticky;
             top: 0;
             border-bottom: 2px solid var(--border-color);
+            z-index: 10;
         }
 
-        td:first-child {
+        td:first-child, th:first-child {
             text-align: left;
-            font-weight: 600;
+            position: sticky;
+            left: 0;
             background-color: #f8fafc;
-            color: var(--primary-color);
+            z-index: 5;
+        }
+        
+        th:first-child {
+            z-index: 15; /* Pour que le coin en haut à gauche reste au dessus */
         }
 
         tr:hover td {
@@ -304,7 +311,7 @@
                 return;
             }
 
-            // 3. Consolider les données (Logique non modifiée)
+            // 3. Consolider les données
             const consolidatedData = {};
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
@@ -335,14 +342,25 @@
                 }
             }
 
-            // --- NOUVELLE LOGIQUE : Identification des colonnes à masquer ---
-            const columnsToHide = ["désignation", "nature", "pump/coût de revient", "valeur"];
+            // --- CORRECTION : Détection robuste et tolérante des colonnes à masquer ---
             const indicesToHide = new Set();
             
             invHeaders.forEach((header, index) => {
-                let headerClean = String(header).trim().toLowerCase();
-                if (columnsToHide.includes(headerClean)) {
-                    indicesToHide.add(index);
+                if (header) {
+                    // Nettoyage extrême : retire les accents, met en minuscules, supprime les espaces inutiles
+                    let headerClean = String(header)
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Enlève les accents (é -> e)
+                        .toLowerCase()
+                        .trim();
+                    
+                    // Utilisation de 'includes' au lieu d'une égalité stricte pour ignorer les espaces invisibles
+                    if (headerClean.includes("designation") || 
+                        headerClean.includes("nature") || 
+                        headerClean.includes("pump") || 
+                        headerClean.includes("cout") || 
+                        headerClean.includes("valeur")) {
+                        indicesToHide.add(index);
+                    }
                 }
             });
 
@@ -351,7 +369,6 @@
             let trHead = document.createElement('tr');
             
             invHeaders.forEach((header, index) => {
-                // On n'ajoute l'en-tête que s'il n'est pas dans la liste des colonnes à masquer
                 if (!indicesToHide.has(index)) {
                     let finalHeader = index === 0 ? 'Mapping (Article Global)' : header;
                     exportHeaders.push(finalHeader);
@@ -371,7 +388,6 @@
                 let rowForExport = [];
 
                 rowData.forEach((cellData, index) => {
-                    // On n'ajoute la donnée que si la colonne correspondante n'est pas masquée
                     if (!indicesToHide.has(index)) {
                         let td = document.createElement('td');
                         let finalValue = cellData;
@@ -392,7 +408,6 @@
             
             tableBody.appendChild(fragment);
 
-            // Succès
             statusMessage.className = "status success";
             statusMessage.textContent = "Calcul terminé avec succès !";
             exportBtn.style.display = "flex";
