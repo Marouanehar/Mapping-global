@@ -177,7 +177,7 @@
         }
         
         th:first-child {
-            z-index: 15; /* Pour que le coin en haut à gauche reste au dessus */
+            z-index: 15;
         }
 
         tr:hover td {
@@ -266,7 +266,6 @@
             const mappingData = await readExcel(mappingFileInput);
             const inventoryData = await readExcel(inventoryFileInput);
 
-            // 1. Extraire le dictionnaire de Mapping
             const mappingDict = {};
             let mappingHeaderFound = false;
             let codeIdxMap = -1, mappingIdxMap = -1;
@@ -292,7 +291,6 @@
                 }
             }
 
-            // 2. Traiter le fichier d'inventaire
             let invHeaderRowIndex = -1;
             let invHeaders = [];
             
@@ -311,7 +309,6 @@
                 return;
             }
 
-            // 3. Consolider les données
             const consolidatedData = {};
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
@@ -342,18 +339,15 @@
                 }
             }
 
-            // --- CORRECTION : Détection robuste et tolérante des colonnes à masquer ---
             const indicesToHide = new Set();
             
             invHeaders.forEach((header, index) => {
                 if (header) {
-                    // Nettoyage extrême : retire les accents, met en minuscules, supprime les espaces inutiles
                     let headerClean = String(header)
-                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Enlève les accents (é -> e)
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                         .toLowerCase()
                         .trim();
                     
-                    // Utilisation de 'includes' au lieu d'une égalité stricte pour ignorer les espaces invisibles
                     if (headerClean.includes("designation") || 
                         headerClean.includes("nature") || 
                         headerClean.includes("pump") || 
@@ -367,10 +361,32 @@
             // 4. Générer l'affichage HTML et préparer les données d'export filtrées
             let exportHeaders = [];
             let trHead = document.createElement('tr');
+            let quantiteCount = 0; // Compteur pour les colonnes Quantité
             
             invHeaders.forEach((header, index) => {
                 if (!indicesToHide.has(index)) {
                     let finalHeader = index === 0 ? 'Mapping (Article Global)' : header;
+                    
+                    // --- NOUVELLE LOGIQUE POUR RENOMMER "QUANTITÉ" ---
+                    if (finalHeader && index !== 0) {
+                        let headerVerif = String(finalHeader)
+                            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            .toLowerCase()
+                            .trim();
+                        
+                        // Si l'en-tête contient "quantite"
+                        if (headerVerif.includes("quantite")) {
+                            quantiteCount++;
+                            if (quantiteCount === 1) {
+                                finalHeader = "Quantité stock théorique";
+                            } else if (quantiteCount === 2) {
+                                finalHeader = "Quantité stock physique";
+                            } else if (quantiteCount === 3) {
+                                finalHeader = "Écart quantité";
+                            }
+                        }
+                    }
+
                     exportHeaders.push(finalHeader);
                     
                     let th = document.createElement('th');
