@@ -107,7 +107,7 @@
         .btn-export {
             background-color: var(--success-color);
             color: white;
-            display: none; /* Masqué par défaut, affiché après le calcul */
+            display: none;
         }
 
         .btn-export:hover { background-color: #059669; }
@@ -211,10 +211,8 @@
 </div>
 
 <script>
-    // Variable globale pour stocker les données prêtes à être exportées
     let exportData = [];
 
-    // Fonction utilitaire pour lire un fichier Excel avec SheetJS
     function readExcel(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -222,10 +220,8 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    // Prendre la première feuille du classeur
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    // Convertir en tableau 2D (similaire à la sortie de PapaParse)
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
                     resolve(json);
                 } catch (error) {
@@ -245,7 +241,6 @@
         const tableBody = document.getElementById('tableBody');
         const exportBtn = document.getElementById('exportBtn');
 
-        // Réinitialisation de l'interface
         statusMessage.className = "status";
         statusMessage.textContent = "Traitement en cours...";
         statusMessage.style.display = "block";
@@ -309,12 +304,7 @@
                 return;
             }
 
-            // Préparation de la première ligne pour l'export Excel
-            let exportHeaders = [...invHeaders];
-            exportHeaders[0] = 'Mapping (Article Global)';
-            exportData.push(exportHeaders);
-
-            // 3. Consolider les données (Logique d'origine conservée)
+            // 3. Consolider les données (Logique non modifiée)
             const consolidatedData = {};
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
@@ -345,38 +335,59 @@
                 }
             }
 
-            // 4. Générer l'affichage HTML et préparer les données d'export
+            // --- NOUVELLE LOGIQUE : Identification des colonnes à masquer ---
+            const columnsToHide = ["désignation", "nature", "pump/coût de revient", "valeur"];
+            const indicesToHide = new Set();
             
+            invHeaders.forEach((header, index) => {
+                let headerClean = String(header).trim().toLowerCase();
+                if (columnsToHide.includes(headerClean)) {
+                    indicesToHide.add(index);
+                }
+            });
+
+            // 4. Générer l'affichage HTML et préparer les données d'export filtrées
+            let exportHeaders = [];
             let trHead = document.createElement('tr');
-            exportHeaders.forEach(header => {
-                let th = document.createElement('th');
-                th.textContent = header;
-                trHead.appendChild(th);
+            
+            invHeaders.forEach((header, index) => {
+                // On n'ajoute l'en-tête que s'il n'est pas dans la liste des colonnes à masquer
+                if (!indicesToHide.has(index)) {
+                    let finalHeader = index === 0 ? 'Mapping (Article Global)' : header;
+                    exportHeaders.push(finalHeader);
+                    
+                    let th = document.createElement('th');
+                    th.textContent = finalHeader;
+                    trHead.appendChild(th);
+                }
             });
             tableHead.appendChild(trHead);
+            exportData.push(exportHeaders);
 
-            const fragment = document.createDocumentFragment(); // Optimisation des performances DOM
+            const fragment = document.createDocumentFragment();
 
             for (const [groupName, rowData] of Object.entries(consolidatedData)) {
                 let trBody = document.createElement('tr');
                 let rowForExport = [];
 
                 rowData.forEach((cellData, index) => {
-                    let td = document.createElement('td');
-                    let finalValue = cellData;
+                    // On n'ajoute la donnée que si la colonne correspondante n'est pas masquée
+                    if (!indicesToHide.has(index)) {
+                        let td = document.createElement('td');
+                        let finalValue = cellData;
 
-                    if (typeof cellData === 'number' && index > 3) {
-                        // Arrondi pour l'affichage HTML
-                        finalValue = parseFloat(cellData.toFixed(2)); 
+                        if (typeof cellData === 'number' && index > 3) {
+                            finalValue = parseFloat(cellData.toFixed(2)); 
+                        }
+                        
+                        td.textContent = finalValue;
+                        trBody.appendChild(td);
+                        rowForExport.push(finalValue);
                     }
-                    
-                    td.textContent = finalValue;
-                    trBody.appendChild(td);
-                    rowForExport.push(finalValue);
                 });
                 
                 fragment.appendChild(trBody);
-                exportData.push(rowForExport); // Ajout à la variable globale pour l'export
+                exportData.push(rowForExport);
             }
             
             tableBody.appendChild(fragment);
@@ -384,7 +395,7 @@
             // Succès
             statusMessage.className = "status success";
             statusMessage.textContent = "Calcul terminé avec succès !";
-            exportBtn.style.display = "flex"; // Afficher le bouton d'export
+            exportBtn.style.display = "flex";
 
         } catch (error) {
             statusMessage.className = "status error";
@@ -392,18 +403,12 @@
         }
     }
 
-    // Fonction pour exporter les données calculées en fichier Excel (.xlsx)
     function exportToExcel() {
         if (exportData.length === 0) return;
 
-        // Créer une feuille de calcul à partir du tableau 2D exportData
         const worksheet = XLSX.utils.aoa_to_sheet(exportData);
-        
-        // Créer un nouveau classeur et y ajouter la feuille
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Inventaire Consolidé");
-        
-        // Déclencher le téléchargement du fichier
         XLSX.writeFile(workbook, "Resultats_Inventaire_Consolide.xlsx");
     }
 </script>
