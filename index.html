@@ -3,383 +3,1018 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consolidation des Stocks par Mapping</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <title>Consolidation d'Inventaire & Mapping</title>
+    <!-- Chargement de PapaParse pour lire les fichiers CSV de manière robuste -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chargement de FontAwesome pour des icônes modernes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        .table-container { max-height: calc(100vh - 320px); }
-        th, td { white-space: nowrap; }
+        :root {
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            
+            --blue-50: #eff6ff;
+            --blue-100: #dbeafe;
+            --blue-600: #2563eb;
+            --blue-700: #1d4ed8;
+            
+            --emerald-50: #ecfdf5;
+            --emerald-100: #d1fae5;
+            --emerald-600: #059669;
+            --emerald-700: #047857;
+
+            --amber-50: #fffbeb;
+            --amber-100: #fef3c7;
+            --amber-600: #d97706;
+
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--slate-100);
+            color: var(--slate-800);
+            line-height: 1.5;
+            padding: 30px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* En-tête */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, var(--slate-900), var(--slate-800));
+            color: white;
+            padding: 24px 32px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 24px;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title h1 i {
+            color: var(--blue-100);
+        }
+
+        .header-title p {
+            color: var(--slate-300);
+            font-size: 14px;
+        }
+
+        .badge-version {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--blue-100);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Section de chargement des fichiers */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .dropzone-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--slate-200);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .dropzone-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .dropzone-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .dropzone-icon-wrapper {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .mapping-icon {
+            background-color: var(--blue-50);
+            color: var(--blue-600);
+        }
+
+        .inventory-icon {
+            background-color: var(--amber-50);
+            color: var(--amber-600);
+        }
+
+        .dropzone-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--slate-900);
+        }
+
+        /* Zone d'import */
+        .file-input-wrapper {
+            position: relative;
+            border: 2px dashed var(--slate-300);
+            border-radius: var(--radius-md);
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: var(--slate-50);
+        }
+
+        .file-input-wrapper:hover, .file-input-wrapper.dragover {
+            border-color: var(--blue-600);
+            background-color: var(--blue-50);
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-prompt {
+            color: var(--slate-700);
+            font-size: 14px;
+        }
+
+        .upload-prompt i {
+            font-size: 32px;
+            color: var(--slate-300);
+            margin-bottom: 12px;
+            display: block;
+            transition: color 0.2s;
+        }
+
+        .file-input-wrapper:hover .upload-prompt i {
+            color: var(--blue-600);
+        }
+
+        .file-selected-info {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .file-selected-info i {
+            font-size: 32px;
+            color: var(--emerald-600);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--slate-900);
+            font-size: 14px;
+            word-break: break-all;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: var(--slate-700);
+        }
+
+        /* Actions et Messages */
+        .control-panel {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 20px 32px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--slate-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--blue-600);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--blue-700);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--slate-300);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background-color: var(--emerald-600);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: var(--emerald-700);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        }
+
+        .status-message {
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            display: none;
+            width: 100%;
+        }
+
+        .status-error {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            display: block;
+        }
+
+        .status-success {
+            background-color: var(--emerald-50);
+            color: var(--emerald-700);
+            border: 1px solid var(--emerald-100);
+            display: block;
+        }
+
+        /* Cartes Statistiques */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+            display: none; /* Affiché uniquement après calcul */
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            border: 1px solid var(--slate-200);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-icon-blue { background-color: var(--blue-50); color: var(--blue-600); }
+        .stat-icon-emerald { background-color: var(--emerald-50); color: var(--emerald-600); }
+        .stat-icon-amber { background-color: var(--amber-50); color: var(--amber-600); }
+
+        .stat-info h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--slate-700);
+            margin-bottom: 2px;
+        }
+
+        .stat-info p {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--slate-900);
+        }
+
+        /* Section Résultats et Recherche */
+        .result-section {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--slate-200);
+            overflow: hidden;
+            display: none; /* Affiché après traitement */
+        }
+
+        .result-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--slate-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            background-color: var(--slate-50);
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--slate-900);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-wrapper {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--slate-700);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--slate-300);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--blue-600);
+        }
+
+        /* Tableau sophistiqué */
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            background-color: var(--slate-900);
+            color: white;
+            font-weight: 600;
+            padding: 14px 16px;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--slate-200);
+            color: var(--slate-800);
+            white-space: nowrap;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Zebra striping */
+        tbody tr:nth-child(even) {
+            background-color: var(--slate-50);
+        }
+
+        tbody tr:hover {
+            background-color: var(--blue-50);
+        }
+
+        /* Alignements de colonnes */
+        /* La première colonne (Nom global) est calée à gauche et en gras */
+        td:first-child, th:first-child {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            font-weight: 700;
+            z-index: 5;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            color: var(--slate-900);
+        }
+        
+        tbody tr:nth-child(even) td:first-child {
+            background-color: var(--slate-50);
+        }
+
+        tbody tr:hover td:first-child {
+            background-color: var(--blue-50);
+        }
+
+        /* Les colonnes de chiffres sont alignées à droite */
+        td.num, th.num {
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 600;
+        }
+
+        /* Les colonnes de texte intermédiaire */
+        td.text-center, th.text-center {
+            text-align: center;
+            color: var(--slate-700);
+        }
+
+        /* Placeholder initial */
+        .placeholder-empty {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 60px 40px;
+            text-align: center;
+            border: 1px dashed var(--slate-300);
+            color: var(--slate-700);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .placeholder-empty i {
+            font-size: 48px;
+            color: var(--slate-300);
+            margin-bottom: 16px;
+        }
+
+        .placeholder-empty h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--slate-800);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animated {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .control-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-wrapper {
+                width: 100%;
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
-    <div class="container mx-auto px-4 py-6">
-        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-            <div>
-                <h1 class="text-2xl font-bold text-amber-500">Consolidation d'Inventaire par Mapping</h1>
-                <p class="text-sm text-slate-400">Agrégation automatique des articles pour éliminer les écarts fictifs inter-codes</p>
+<body>
+
+<div class="container">
+    
+    <!-- En-tête -->
+    <header>
+        <div class="header-title">
+            <h1><i class="fa-solid fa-calculator"></i> Mapping & Consolidation d'Inventaire</h1>
+            <p>Outil d'intégration GitHub pour éliminer les écarts d'inventaire sur le point de vente</p>
+        </div>
+        <div class="badge-version">v2.1 - Sécurisé Local</div>
+    </header>
+
+    <!-- Zone de chargement des fichiers -->
+    <div class="upload-grid">
+        
+        <!-- Fichier 1: LISTE DES PRODUITS CHAR (Mapping) -->
+        <div class="dropzone-card">
+            <div class="dropzone-header">
+                <div class="dropzone-icon-wrapper mapping-icon">
+                    <i class="fa-solid fa-sitemap"></i>
+                </div>
+                <h3>1. Liste de Mapping</h3>
             </div>
-            <div id="exportBtnContainer" class="hidden">
-                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    Télécharger en Excel (.xlsx)
-                </button>
+            
+            <div class="file-input-wrapper" id="mappingWrapper">
+                <input type="file" id="mappingFile" accept=".csv" onchange="handleFileSelected(this, 'mapping')">
+                <div class="upload-prompt" id="mappingPrompt">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    Glissez-déposez ou cliquez pour charger<br>
+                    <strong>LISTE DES PRODUITS CHAR.csv</strong>
+                </div>
+                <div class="file-selected-info" id="mappingInfo">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div class="file-name" id="mappingName">Fichier.csv</div>
+                    <div class="file-size" id="mappingSize">0 KB</div>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm relative">
-                <label class="block text-sm font-semibold text-slate-300 mb-2">1. Fichier de Mapping (Liste des produits)</label>
-                <input type="file" id="fileMapping" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-amber-400 hover:file:bg-slate-600 cursor-pointer"/>
-                <span id="statusMapping" class="text-xs text-amber-500 mt-2 block">En attente du fichier...</span>
+        <!-- Fichier 2: Résultats d'Inventaire -->
+        <div class="dropzone-card">
+            <div class="dropzone-header">
+                <div class="dropzone-icon-wrapper inventory-icon">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <h3>2. Résultats d'Inventaire</h3>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm relative">
-                <label class="block text-sm font-semibold text-slate-300 mb-2">2. Fichier d'Inventaire (Résultats Chariot...)</label>
-                <input type="file" id="fileInventory" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-amber-400 hover:file:bg-slate-600 cursor-pointer"/>
-                <span id="statusInventory" class="text-xs text-amber-500 mt-2 block">En attente du fichier...</span>
+            
+            <div class="file-input-wrapper" id="inventoryWrapper">
+                <input type="file" id="inventoryFile" accept=".csv" onchange="handleFileSelected(this, 'inventory')">
+                <div class="upload-prompt" id="inventoryPrompt">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    Glissez-déposez ou cliquez pour charger<br>
+                    <strong>Résultats_Inventaire_CHARIOT.csv</strong>
+                </div>
+                <div class="file-selected-info" id="inventoryInfo">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div class="file-name" id="inventoryName">Fichier.csv</div>
+                    <div class="file-size" id="inventorySize">0 KB</div>
+                </div>
             </div>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6">
-            <div class="w-full md:w-1/3">
-                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Rechercher un Mapping (ex: BATONNET, CORNET...)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 disabled:opacity-50" disabled>
-            </div>
-            <button id="processBtn" onclick="processFiles()" class="w-full md:w-auto bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold px-6 py-2 rounded-lg shadow transition disabled:opacity-30 disabled:cursor-not-allowed" disabled>
-                Lancer la Consolidation
+    </div>
+
+    <!-- Barre d'actions et messages -->
+    <div class="control-panel">
+        <div>
+            <button class="btn btn-primary" id="btnProcess" onclick="processFiles()">
+                <i class="fa-solid fa-gears"></i> Consolider les données
             </button>
         </div>
+        <div id="statusMessage" class="status-message"></div>
+    </div>
 
-        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
-            <div class="table-container overflow-auto">
-                <table id="resultTable" class="w-full text-left border-collapse text-xs">
-                    <thead class="bg-slate-950 text-slate-300 sticky top-0 z-10 font-semibold border-b border-slate-700">
-                        <tr class="border-b border-slate-800 text-center text-amber-400">
-                            <th colspan="4" class="p-2 border-r border-slate-800">GÉNÉRAL</th>
-                            <th colspan="4" class="p-2 border-r border-slate-800">ENTRÉES / SORTIES (QTE)</th>
-                            <th colspan="2" class="p-2 border-r border-slate-800">STOCK THÉORIQUE</th>
-                            <th colspan="2" class="p-2 border-r border-slate-800">STOCK PHYSIQUE</th>
-                            <th colspan="3" class="p-2 border-r border-slate-800">ÉCARTS & MATIÈRE</th>
-                            <th colspan="3" class="p-2 border-r border-slate-800">CHIFFRE D'AFFAIRES</th>
-                            <th colspan="2" class="p-2">CONSOMMATION RÉELLE</th>
-                        </tr>
-                        <tr class="bg-slate-900 text-slate-200">
-                            <th class="p-2 border-r border-slate-800">Code (Réf)</th>
-                            <th class="p-2 border-r border-slate-800 min-w-[200px]">Désignation Mapping</th>
-                            <th class="p-2 border-r border-slate-800 text-center">Nature</th>
-                            <th class="p-2 border-r border-slate-800 text-right">PUMP</th>
-                            <th class="p-2 text-right">Stk Init</th>
-                            <th class="p-2 text-right">Achats</th>
-                            <th class="p-2 text-right">Transf In</th>
-                            <th class="p-2 border-r border-slate-800 text-right">Transf Out</th>
-                            <th class="p-2 text-right">Consom.</th>
-                            <th class="p-2 border-r border-slate-800 text-right">Démarque</th>
-                            <th class="p-2 text-right">Qté Théo</th>
-                            <th class="p-2 border-r border-slate-800 text-right">Val Théo</th>
-                            <th class="p-2 text-right">Qté Phys</th>
-                            <th class="p-2 border-r border-slate-800 text-right">Val Phys</th>
-                            <th class="p-2 text-right text-slate-400">Val Mat. Vendu</th>
-                            <th class="p-2 text-right font-bold text-white">Ecart Qté</th>
-                            <th class="p-2 border-r border-slate-800 text-right font-bold text-white">Ecart Val</th>
-                            <th class="p-2 text-right">Qté CA</th>
-                            <th class="p-2 text-right">CA TTC</th>
-                            <th class="p-2 border-r border-slate-800 text-right">CA HT</th>
-                            <th class="p-2 text-right">Qté Réel</th>
-                            <th class="p-2 text-right">Val Réel</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-800 font-mono text-slate-300">
-                        <tr>
-                            <td colspan="22" class="text-center py-12 text-slate-500 font-sans">
-                                Veuillez importer vos deux fichiers pour générer le tableau consolidé.
-                            </td>
-                        </tr>
-                    </tbody>
-                    <tfoot id="tableFoot" class="bg-slate-950 font-mono font-bold text-amber-400 sticky bottom-0 hidden">
-                        </tfoot>
-                </table>
+    <!-- Cartes statistiques d'inventaire -->
+    <div class="stats-grid animated" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-blue">
+                <i class="fa-solid fa-link"></i>
+            </div>
+            <div class="stat-info">
+                <h4>Articles Mappés</h4>
+                <p id="statMappedCount">0</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-amber">
+                <i class="fa-solid fa-filter"></i>
+            </div>
+            <div class="stat-info">
+                <h4>Sélectionnés pour Calcul</h4>
+                <p id="statFilteredCount">0</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-emerald">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div class="stat-info">
+                <h4>Groupes Consolidés</h4>
+                <p id="statGroupsCount">0</p>
             </div>
         </div>
     </div>
 
-    <script>
-        let mappingData = {};
-        let rawInventory = [];
-        let consolidatedList = [];
-        let file1Ready = false;
-        let file2Ready = false;
+    <!-- Placeholder d'attente -->
+    <div class="placeholder-empty" id="placeholderEmpty">
+        <i class="fa-solid fa-table-list"></i>
+        <h3>Aucune donnée consolidée</h3>
+        <p>Importez votre liste de mapping et vos résultats d'inventaire, puis cliquez sur "Consolider les données".</p>
+    </div>
 
-        // Lecture du fichier Mapping
-        document.getElementById('fileMapping').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+    <!-- Section d'affichage des Résultats -->
+    <div class="result-section animated" id="resultSection">
+        <div class="result-header">
+            <div class="result-title">
+                <i class="fa-solid fa-table-cells-large"></i> Aperçu de l'inventaire consolidé
+            </div>
+            
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <!-- Recherche en temps réel -->
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un article global..." oninput="filterResults()">
+                </div>
                 
-                // Recherche dynamique de la ligne d'en-tête (cherche "CODE ARTICLE" ou "Mapping")
-                let headerIdx = -1;
-                for (let i = 0; i < Math.min(10, json.length); i++) {
-                    if (json[i] && json[i].some(cell => String(cell).toUpperCase().includes('CODE ARTICLE') || String(cell).toUpperCase().includes('MAPPING'))) {
-                        headerIdx = i;
-                        break;
-                    }
-                }
-                
-                if (headerIdx === -1) headerIdx = 3; // Par défaut ligne 4 (index 3) selon votre structure
+                <!-- Bouton d'exportation -->
+                <button class="btn btn-success" onclick="exportToCSV()">
+                    <i class="fa-solid fa-file-excel"></i> Exporter en CSV (Excel)
+                </button>
+            </div>
+        </div>
 
-                const headers = json[headerIdx].map(h => String(h || '').trim().toUpperCase());
-                const codeIdx = headers.findIndex(h => h.includes('CODE'));
-                const mapIdx = headers.findIndex(h => h.includes('MAPPING'));
-                const nomIdx = headers.findIndex(h => h.includes('NOM'));
+        <div class="table-responsive">
+            <table id="resultTable">
+                <thead>
+                    <tr id="tableHead"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
 
-                mappingData = {};
-                for (let i = headerIdx + 1; i < json.length; i++) {
-                    const row = json[i];
-                    if (row && row[codeIdx] !== undefined) {
-                        const code = String(row[codeIdx]).trim();
-                        const mapping = row[mapIdx] ? String(row[mapIdx]).trim() : (row[nomIdx] ? String(row[nomIdx]).trim() : "SANS MAPPING");
-                        mappingData[code] = mapping;
-                    }
-                }
+</div>
 
-                file1Ready = true;
-                document.getElementById('statusMapping').innerText = `✔ Mapping chargé (${Object.keys(mappingData).length} codes articles référencés)`;
-                document.getElementById('statusMapping').className = "text-xs text-emerald-400 mt-2 block font-semibold";
-                checkReady();
-            };
-            reader.readAsArrayBuffer(file);
+<script>
+    // Variables de stockage global
+    let currentConsolidatedData = null;
+    let currentInvHeaders = [];
+    let originalMappedCount = 0;
+    let originalFilteredCount = 0;
+
+    // Gestion du glisser-déposer
+    ['mappingWrapper', 'inventoryWrapper'].forEach(id => {
+        const element = document.getElementById(id);
+        
+        element.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            element.classList.add('dragover');
         });
 
-        // Lecture du fichier Inventaire
-        document.getElementById('fileInventory').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheetName = workbook.SheetNames[0];
-                const sheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-
-                // Repérer le début des données (après la ligne des symboles x, a, b, c...)
-                let startRow = -1;
-                for (let i = 0; i < Math.min(15, json.length); i++) {
-                    if (json[i] && (json[i][0] === 'x' || json[i][4] === 'x' || String(json[i][0]).toLowerCase().includes('code'))) {
-                        startRow = i + 1;
-                    }
-                }
-                if (startRow === -1) startRow = 4; // Par défaut ligne 5 (index 4)
-
-                rawInventory = json.slice(startRow).filter(row => row && row.length > 2 && row[0] !== undefined);
-                
-                file2Ready = true;
-                document.getElementById('statusInventory').innerText = `✔ Inventaire chargé (${rawInventory.length} lignes à consolider)`;
-                document.getElementById('statusInventory').className = "text-xs text-emerald-400 mt-2 block font-semibold";
-                checkReady();
-            };
-            reader.readAsArrayBuffer(file);
+        element.addEventListener('dragleave', () => {
+            element.classList.remove('dragover');
         });
 
-        function checkReady() {
-            if (file1Ready && file2Ready) {
-                document.getElementById('processBtn').disabled = false;
+        element.addEventListener('drop', (e) => {
+            e.preventDefault();
+            element.classList.remove('dragover');
+        });
+    });
+
+    // Retour d'information visuel lors de l'import d'un fichier
+    function handleFileSelected(input, type) {
+        const file = input.files[0];
+        const prompt = document.getElementById(type + 'Prompt');
+        const info = document.getElementById(type + 'Info');
+        const nameEl = document.getElementById(type + 'Name');
+        const sizeEl = document.getElementById(type + 'Size');
+
+        if (file) {
+            nameEl.textContent = file.name;
+            sizeEl.textContent = (file.size / 1024).toFixed(1) + " KB";
+            prompt.style.display = 'none';
+            info.style.display = 'block';
+            
+            // Masquer les résultats précédents s'ils changent de fichier
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('statsGrid').style.display = 'none';
+            document.getElementById('placeholderEmpty').style.display = 'block';
+        } else {
+            prompt.style.display = 'block';
+            info.style.display = 'none';
+        }
+    }
+
+    // Fonction utilitaire pour lire un fichier avec PapaParse
+    function parseCSV(file) {
+        return new Promise((resolve, reject) => {
+            Papa.parse(file, {
+                complete: results => resolve(results.data),
+                error: err => reject(err),
+                skipEmptyLines: true
+            });
+        });
+    }
+
+    async function processFiles() {
+        const mappingFileInput = document.getElementById('mappingFile').files[0];
+        const inventoryFileInput = document.getElementById('inventoryFile').files[0];
+        const statusMessage = document.getElementById('statusMessage');
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+
+        statusMessage.className = "status-message";
+        statusMessage.style.display = "none";
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+
+        if (!mappingFileInput || !inventoryFileInput) {
+            statusMessage.textContent = "Veuillez charger les deux fichiers CSV avant de lancer la consolidation.";
+            statusMessage.classList.add('status-error');
+            return;
+        }
+
+        try {
+            const mappingData = await parseCSV(mappingFileInput);
+            const inventoryData = await parseCSV(inventoryFileInput);
+
+            // 1. Extraire le dictionnaire de Mapping
+            const mappingDict = {};
+            let mappingHeaderFound = false;
+            let codeIdxMap = -1, mappingIdxMap = -1;
+
+            for (let i = 0; i < mappingData.length; i++) {
+                const row = mappingData[i];
+                if (!mappingHeaderFound) {
+                    // Recherche de l'entête
+                    for (let j = 0; j < row.length; j++) {
+                        if (row[j] && row[j].trim().toUpperCase() === 'CODE ARTICLE') codeIdxMap = j;
+                        if (row[j] && row[j].trim().toUpperCase() === 'MAPPING') mappingIdxMap = j;
+                    }
+                    if (codeIdxMap !== -1 && mappingIdxMap !== -1) {
+                        mappingHeaderFound = true;
+                        continue;
+                    }
+                } else {
+                    const code = row[codeIdxMap] ? row[codeIdxMap].trim() : null;
+                    const mapName = row[mappingIdxMap] ? row[mappingIdxMap].trim() : null;
+                    if (code && mapName) {
+                        mappingDict[code] = mapName;
+                    }
+                }
+            }
+
+            // Nombre total de codes mappés uniques
+            originalMappedCount = Object.keys(mappingDict).length;
+
+            // 2. Traiter le fichier d'inventaire
+            let invHeaderRowIndex = -1;
+            let invHeaders = [];
+            
+            // Trouver la ligne d'entête (qui contient 'Code') dans le fichier d'inventaire
+            for (let i = 0; i < inventoryData.length; i++) {
+                if (inventoryData[i][0] && inventoryData[i][0].trim() === 'Code') {
+                    invHeaderRowIndex = i;
+                    invHeaders = inventoryData[i];
+                    break;
+                }
+            }
+
+            if (invHeaderRowIndex === -1) {
+                statusMessage.textContent = "Erreur: Impossible de trouver la colonne 'Code' servant de repère dans le fichier d'inventaire.";
+                statusMessage.classList.add('status-error');
+                return;
+            }
+
+            // Conserver l'en-tête original
+            currentInvHeaders = [...invHeaders];
+
+            // 3. Consolider les données (strictement selon vos calculs exacts)
+            const consolidatedData = {};
+            originalFilteredCount = 0;
+            
+            for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
+                const row = inventoryData[i];
+                const itemCode = row[0] ? row[0].trim() : null;
+                
+                // Règle de filtrage stricte : l'article DOIT se trouver dans la colonne mapping
+                if (itemCode && mappingDict[itemCode]) {
+                    const groupName = mappingDict[itemCode];
+                    originalFilteredCount++;
+                    
+                    // Initialiser le groupe s'il n'existe pas encore
+                    if (!consolidatedData[groupName]) {
+                        consolidatedData[groupName] = new Array(invHeaders.length).fill(0);
+                        consolidatedData[groupName][0] = groupName; // Première colonne : Nom global
+                    }
+
+                    // Additionner les colonnes numériques (en sautant Code, Désignation, Nature, Pump)
+                    for (let col = 1; col < row.length; col++) {
+                        // Les colonnes de texte à ne pas sommer (Désignation, Nature, Pump)
+                        if (col === 1 || col === 2 || col === 3) {
+                            consolidatedData[groupName][col] = "-"; 
+                            continue;
+                        }
+                        
+                        // Analyse et conversion de la valeur
+                        let valText = row[col] ? row[col].replace(',', '.') : '0';
+                        let val = parseFloat(valText);
+                        
+                        if (!isNaN(val)) {
+                            consolidatedData[groupName][col] += val;
+                        }
+                    }
+                }
+            }
+
+            currentConsolidatedData = consolidatedData;
+
+            // 4. Générer l'affichage HTML dans le tableau sophistiqué
+            renderTable(consolidatedData);
+
+            // Mettre à jour les indicateurs statistiques
+            document.getElementById('statMappedCount').textContent = originalMappedCount;
+            document.getElementById('statFilteredCount').textContent = originalFilteredCount;
+            document.getElementById('statGroupsCount').textContent = Object.keys(consolidatedData).length;
+
+            // Afficher les blocs de résultats
+            document.getElementById('placeholderEmpty').style.display = 'none';
+            document.getElementById('statsGrid').style.display = 'grid';
+            document.getElementById('resultSection').style.display = 'block';
+
+            // Afficher le statut de succès
+            statusMessage.textContent = "Consolidation réussie ! " + Object.keys(consolidatedData).length + " articles globaux consolidés.";
+            statusMessage.classList.add('status-success');
+
+        } catch (error) {
+            statusMessage.textContent = "Une erreur s'est produite lors du traitement : " + error.message;
+            statusMessage.classList.add('status-error');
+        }
+    }
+
+    // Affichage des données dans la table
+    function renderTable(dataToDisplay) {
+        const tableHead = document.getElementById('tableHead');
+        const tableBody = document.getElementById('tableBody');
+        
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+
+        if (Object.keys(dataToDisplay).length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="' + currentInvHeaders.length + '" style="text-align: center; padding: 20px;">Aucun article trouvé pour cette recherche.</td></tr>';
+            return;
+        }
+
+        // Création de l'entête du tableau
+        currentInvHeaders.forEach((header, index) => {
+            let th = document.createElement('th');
+            if (index === 0) {
+                th.textContent = 'Mapping (Article Global)';
+            } else {
+                th.textContent = header;
+            }
+            
+            // Appliquer les classes d'en-tête selon le type de données
+            if (index > 3) {
+                th.className = "num";
+            } else if (index === 1 || index === 2 || index === 3) {
+                th.className = "text-center";
+            }
+            tableHead.appendChild(th);
+        });
+
+        // Remplissage du corps du tableau
+        for (const [groupName, rowData] of Object.entries(dataToDisplay)) {
+            let trBody = document.createElement('tr');
+            rowData.forEach((cellData, index) => {
+                let td = document.createElement('td');
+                
+                if (index === 0) {
+                    td.textContent = cellData;
+                } else if (index === 1 || index === 2 || index === 3) {
+                    td.textContent = cellData;
+                    td.className = "text-center";
+                } else {
+                    // C'est un chiffre
+                    if (typeof cellData === 'number') {
+                        td.textContent = cellData.toFixed(2);
+                        td.className = "num";
+                        // Petite touche visuelle : couleur rouge si écart négatif
+                        if (currentInvHeaders[index] && currentInvHeaders[index].toLowerCase().includes('ecart') && cellData < 0) {
+                            td.style.color = '#dc2626';
+                        }
+                    } else {
+                        td.textContent = cellData;
+                        td.className = "num";
+                    }
+                }
+                trBody.appendChild(td);
+            });
+            tableBody.appendChild(trBody);
+        }
+    }
+
+    // Filtrage dynamique en temps réel
+    function filterResults() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        if (!currentConsolidatedData) return;
+
+        if (searchTerm === "") {
+            renderTable(currentConsolidatedData);
+            return;
+        }
+
+        const filtered = {};
+        for (const [groupName, rowData] of Object.entries(currentConsolidatedData)) {
+            if (groupName.toLowerCase().includes(searchTerm)) {
+                filtered[groupName] = rowData;
             }
         }
+        renderTable(filtered);
+    }
 
-        function processFiles() {
-            const grouped = {};
+    // Exportation du tableau consolidé en CSV formaté pour Excel
+    function exportToCSV() {
+        if (!currentConsolidatedData || Object.keys(currentConsolidatedData).length === 0) {
+            alert("Aucune donnée disponible à l'export.");
+            return;
+        }
 
-            rawInventory.forEach(row => {
-                const code = String(row[0] || '').trim();
-                const nature = String(row[2] || '').trim();
-                
-                // Trouve le nom du mapping, sinon conserve la désignation d'origine
-                const mapName = mappingData[code] || String(row[1] || 'ARTICLE SANS MAPPING').trim();
-                
-                if (!grouped[mapName]) {
-                    grouped[mapName] = {
-                        codeRef: code, // Garde un code d'exemple ou un identifiant
-                        nature: nature,
-                        stkInit: 0, achats: 0, transfIn: 0, transfOut: 0, consom: 0, demarque: 0,
-                        qteTheo: 0, valTheo: 0, qtePhys: 0, valPhys: 0,
-                        valMatVendu: 0, ecartQte: 0, ecartVal: 0,
-                        qteCA: 0, caTTC: 0, caHT: 0, qteReel: 0, valReel: 0
-                    };
+        // BOM UTF-8 pour que Excel en français ouvre directement les caractères spéciaux et accents
+        let csvContent = "﻿";
+
+        // Génération de la ligne d'en-tête (séparateur point-virgule pour Excel FR)
+        const headers = [...currentInvHeaders];
+        headers[0] = 'Mapping (Article Global)';
+        csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(";") + "
+";
+
+        // Génération des lignes de données
+        for (const [groupName, rowData] of Object.entries(currentConsolidatedData)) {
+            const rowCells = rowData.map((cellData, index) => {
+                if (index === 1 || index === 2 || index === 3) {
+                    return `"-"`;
                 }
-
-                const g = grouped[mapName];
-                // Fonctions sécurisées pour additionner les nombres flottants
-                const num = (idx) => parseFloat(row[idx]) || 0;
-
-                g.stkInit += num(4);
-                g.achats += num(5);
-                g.transfIn += num(6);
-                g.transfOut += num(7);
-                g.consom += num(8);
-                g.demarque += num(9);
-                g.qteTheo += num(10);
-                g.valTheo += num(11);
-                g.qtePhys += num(12);
-                g.valPhys += num(13);
-                g.valMatVendu += num(14);
-                g.ecartQte += num(15);
-                g.ecartVal += num(16);
-                g.qteCA += num(17);
-                g.caTTC += num(18);
-                g.caHT += num(19);
-                g.qteReel += num(20);
-                g.valReel += num(21);
-            });
-
-            // Conversion en tableau et calcul du PUMP moyen pondéré par mapping
-            consolidatedList = Object.keys(grouped).map(key => {
-                const item = grouped[key];
-                // Recalcul logique du PUMP : Valeur Théorique / Quantité Théorique (ou Val Phys / Qté Phys)
-                let pump = 0;
-                if (item.qteTheo !== 0) {
-                    pump = item.valTheo / item.qteTheo;
-                } else if (item.qtePhys !== 0) {
-                    pump = item.valPhys / item.qtePhys;
+                if (typeof cellData === 'number') {
+                    // Remplacement du point par la virgule pour la compatibilité Excel français
+                    return `"${cellData.toFixed(2).replace('.', ',')}"`;
                 }
-                return { name: key, ...item, pump: pump };
+                return `"${(cellData || '').toString().replace(/"/g, '""')}"`;
             });
-
-            // Tri alphabétique par Mapping
-            consolidatedList.sort((a, b) => a.name.localeCompare(b.name));
-
-            renderTable(consolidatedList);
-            document.getElementById('exportBtnContainer').classList.remove('hidden');
-            document.getElementById('searchInput').disabled = false;
+            csvContent += rowCells.join(";") + "
+";
         }
 
-        function fmt(num, decimals = 2) {
-            if (num === 0 || isNaN(num)) return "0.00";
-            return Number(num).toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-        }
+        // Création et téléchargement du fichier
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        // Nom du fichier contenant la date du jour
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        link.setAttribute("download", `Inventaire_Consolide_Mapping_${dateStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 
-        function renderTable(data) {
-            const tbody = document.getElementById('tableBody');
-            const tfoot = document.getElementById('tableFoot');
-            tbody.innerHTML = '';
-
-            let tot = {
-                stkInit: 0, achats: 0, transfIn: 0, transfOut: 0, consom: 0, demarque: 0,
-                qteTheo: 0, valTheo: 0, qtePhys: 0, valPhys: 0, valMatVendu: 0,
-                ecartQte: 0, ecartVal: 0, qteCA: 0, caTTC: 0, caHT: 0, qteReel: 0, valReel: 0
-            };
-
-            data.forEach((row, index) => {
-                // Cumul des totaux
-                Object.keys(tot).forEach(k => tot[k] += (row[k] || 0));
-
-                // Coloration conditionnelle des écarts (vert = parfait, rouge = perte, bleu = excédent)
-                let ecartClass = "text-slate-300";
-                if (row.ecartQte < -0.01) ecartClass = "text-rose-500 font-bold bg-rose-950/30";
-                else if (row.ecartQte > 0.01) ecartClass = "text-sky-400 font-bold bg-sky-950/30";
-                else ecartClass = "text-emerald-400 font-bold";
-
-                const tr = document.createElement('tr');
-                tr.className = index % 2 === 0 ? "bg-slate-900/50 hover:bg-slate-800" : "bg-slate-850 hover:bg-slate-800";
-                tr.innerHTML = `
-                    <td class="p-2 border-r border-slate-800 text-slate-500">${row.codeRef}</td>
-                    <td class="p-2 border-r border-slate-800 font-sans font-bold text-amber-400">${row.name}</td>
-                    <td class="p-2 border-r border-slate-800 text-center text-slate-400">${row.nature}</td>
-                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.pump)}</td>
-                    <td class="p-2 text-right">${fmt(row.stkInit)}</td>
-                    <td class="p-2 text-right">${fmt(row.achats)}</td>
-                    <td class="p-2 text-right">${fmt(row.transfIn)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.transfOut)}</td>
-                    <td class="p-2 text-right">${fmt(row.consom)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.demarque)}</td>
-                    <td class="p-2 text-right font-semibold">${fmt(row.qteTheo)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.valTheo)}</td>
-                    <td class="p-2 text-right font-semibold text-white">${fmt(row.qtePhys)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right text-slate-400">${fmt(row.valPhys)}</td>
-                    <td class="p-2 text-right text-slate-500">${fmt(row.valMatVendu)}</td>
-                    <td class="p-2 text-right ${ecartClass}">${fmt(row.ecartQte)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right ${ecartClass}">${fmt(row.ecartVal)}</td>
-                    <td class="p-2 text-right">${fmt(row.qteCA)}</td>
-                    <td class="p-2 text-right">${fmt(row.caTTC)}</td>
-                    <td class="p-2 border-r border-slate-800 text-right">${fmt(row.caHT)}</td>
-                    <td class="p-2 text-right">${fmt(row.qteReel)}</td>
-                    <td class="p-2 text-right">${fmt(row.valReel)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            // Affichage de la ligne des Totaux
-            tfoot.innerHTML = `
-                <tr>
-                    <td colspan="4" class="p-3 border-r border-slate-800 text-right font-sans uppercase tracking-wider text-white">Total Général</td>
-                    <td class="p-3 text-right">${fmt(tot.stkInit)}</td>
-                    <td class="p-3 text-right">${fmt(tot.achats)}</td>
-                    <td class="p-3 text-right">${fmt(tot.transfIn)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.transfOut)}</td>
-                    <td class="p-3 text-right">${fmt(tot.consom)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.demarque)}</td>
-                    <td class="p-3 text-right text-white">${fmt(tot.qteTheo)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.valTheo)}</td>
-                    <td class="p-3 text-right text-white">${fmt(tot.qtePhys)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.valPhys)}</td>
-                    <td class="p-3 text-right">${fmt(tot.valMatVendu)}</td>
-                    <td class="p-3 text-right ${tot.ecartQte < 0 ? 'text-rose-500' : 'text-emerald-400'}">${fmt(tot.ecartQte)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right ${tot.ecartVal < 0 ? 'text-rose-500' : 'text-emerald-400'}">${fmt(tot.ecartVal)}</td>
-                    <td class="p-3 text-right">${fmt(tot.qteCA)}</td>
-                    <td class="p-3 text-right">${fmt(tot.caTTC)}</td>
-                    <td class="p-3 border-r border-slate-800 text-right">${fmt(tot.caHT)}</td>
-                    <td class="p-3 text-right">${fmt(tot.qteReel)}</td>
-                    <td class="p-3 text-right">${fmt(tot.valReel)}</td>
-                </tr>
-            `;
-            tfoot.classList.remove('hidden');
-        }
-
-        function filterTable() {
-            const query = document.getElementById('searchInput').value.toUpperCase();
-            const filtered = consolidatedList.filter(item => item.name.toUpperCase().includes(query));
-            renderTable(filtered);
-        }
-
-        function exportToExcel() {
-            // Préparation des données pour l'export Excel au même format que l'inventaire d'origine
-            const exportData = consolidatedList.map(row => ({
-                "Code (Réf)": row.codeRef,
-                "Désignation Mapping": row.name,
-                "Nature": row.nature,
-                "Pump/Coût de revient": Number(row.pump.toFixed(4)),
-                "Stock initiale": Number(row.stkInit.toFixed(2)),
-                "Achats": Number(row.achats.toFixed(2)),
-                "Transferts in": Number(row.transfIn.toFixed(2)),
-                "Transferts out": Number(row.transfOut.toFixed(2)),
-                "Consomation": Number(row.consom.toFixed(2)),
-                "Démarque": Number(row.demarque.toFixed(2)),
-                "Stock final théorique (Qté)": Number(row.qteTheo.toFixed(2)),
-                "Stock final théorique (Val)": Number(row.valTheo.toFixed(2)),
-                "Stock physique (Qté)": Number(row.qtePhys.toFixed(2)),
-                "Stock physique (Val)": Number(row.valPhys.toFixed(2)),
-                "Valeur Matière du quantité Vendu": Number(row.valMatVendu.toFixed(2)),
-                "Ecart (Qté)": Number(row.ecartQte.toFixed(2)),
-                "Ecart (Val)": Number(row.ecartVal.toFixed(2)),
-                "CA (Qté)": Number(row.qteCA.toFixed(2)),
-                "CA TTC": Number(row.caTTC.toFixed(2)),
-                "CA HT": Number(row.caHT.toFixed(2)),
-                "Consomation réel (Qté)": Number(row.qteReel.toFixed(2)),
-                "Consomation réel (Val)": Number(row.valReel.toFixed(2))
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Inventaire Consolidé");
-            
-            // Générer le fichier et déclencher le téléchargement
-            const dateStr = new Date().toISOString().slice(0,10);
-            XLSX.writeFile(workbook, `Inventaire_Consolide_Mapping_${dateStr}.xlsx`);
-        }
-    </script>
 </body>
 </html>
