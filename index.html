@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consolidation d'Inventaire & Mapping</title>
-    <!-- Chargement de PapaParse pour lire les fichiers CSV de manière robuste -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <title>Consolidation d'Inventaire & Mapping Excel (XLSX)</title>
+    <!-- Chargement de SheetJS (xlsx.full.min.js) pour lire et écrire les fichiers Excel natifs (.xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Chargement de FontAwesome pour des icônes modernes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -21,7 +21,7 @@
             
             --blue-50: #eff6ff;
             --blue-100: #dbeafe;
-            --blue-600: #2563eb;
+            --blue-600: #1e40af;
             --blue-700: #1d4ed8;
             
             --emerald-50: #ecfdf5;
@@ -83,7 +83,7 @@
         }
 
         .header-title h1 i {
-            color: var(--blue-100);
+            color: #f59e0b;
         }
 
         .header-title p {
@@ -263,13 +263,7 @@
 
         .btn-primary:hover {
             background-color: var(--blue-700);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-        }
-
-        .btn-primary:disabled {
-            background-color: var(--slate-300);
-            cursor: not-allowed;
-            box-shadow: none;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
         }
 
         .btn-success {
@@ -410,7 +404,7 @@
             border-color: var(--blue-600);
         }
 
-        /* Tableau sophistiqué */
+        /* Tableau */
         .table-responsive {
             max-height: 500px;
             overflow-y: auto;
@@ -452,7 +446,6 @@
             border-bottom: none;
         }
 
-        /* Zebra striping */
         tbody tr:nth-child(even) {
             background-color: var(--slate-50);
         }
@@ -461,8 +454,7 @@
             background-color: var(--blue-50);
         }
 
-        /* Alignements de colonnes */
-        /* La première colonne (Nom global) est calée à gauche et en gras */
+        /* Fixation de la première colonne (Mapping Global) */
         td:first-child, th:first-child {
             position: sticky;
             left: 0;
@@ -481,14 +473,13 @@
             background-color: var(--blue-50);
         }
 
-        /* Les colonnes de chiffres sont alignées à droite */
+        /* Alignements */
         td.num, th.num {
             text-align: right;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             font-weight: 600;
         }
 
-        /* Les colonnes de texte intermédiaire */
         td.text-center, th.text-center {
             text-align: center;
             color: var(--slate-700);
@@ -527,7 +518,6 @@
             animation: fadeIn 0.4s ease forwards;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             header {
                 flex-direction: column;
@@ -551,13 +541,13 @@
     <!-- En-tête -->
     <header>
         <div class="header-title">
-            <h1><i class="fa-solid fa-calculator"></i> Mapping & Consolidation d'Inventaire</h1>
-            <p>Outil d'intégration GitHub pour éliminer les écarts d'inventaire sur le point de vente</p>
+            <h1><i class="fa-solid fa-file-excel"></i> Mapping & Consolidation XLSX</h1>
+            <p>Outil d'intégration GitHub traitant directement les fichiers natifs Excel (.xlsx)</p>
         </div>
-        <div class="badge-version">v2.1 - Sécurisé Local</div>
+        <div class="badge-version">v3.0 - Spécial Excel</div>
     </header>
 
-    <!-- Zone de chargement des fichiers -->
+    <!-- Zone de chargement des fichiers Excel -->
     <div class="upload-grid">
         
         <!-- Fichier 1: LISTE DES PRODUITS CHAR (Mapping) -->
@@ -570,15 +560,15 @@
             </div>
             
             <div class="file-input-wrapper" id="mappingWrapper">
-                <input type="file" id="mappingFile" accept=".csv" onchange="handleFileSelected(this, 'mapping')">
+                <input type="file" id="mappingFile" accept=".xlsx, .xls" onchange="handleFileSelected(this, 'mapping')">
                 <div class="upload-prompt" id="mappingPrompt">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <i class="fa-regular fa-file-excel"></i>
                     Glissez-déposez ou cliquez pour charger<br>
-                    <strong>LISTE DES PRODUITS CHAR.csv</strong>
+                    <strong>LISTE DES PRODUITS CHAR.xlsx</strong>
                 </div>
                 <div class="file-selected-info" id="mappingInfo">
                     <i class="fa-solid fa-circle-check"></i>
-                    <div class="file-name" id="mappingName">Fichier.csv</div>
+                    <div class="file-name" id="mappingName">Fichier.xlsx</div>
                     <div class="file-size" id="mappingSize">0 KB</div>
                 </div>
             </div>
@@ -594,15 +584,15 @@
             </div>
             
             <div class="file-input-wrapper" id="inventoryWrapper">
-                <input type="file" id="inventoryFile" accept=".csv" onchange="handleFileSelected(this, 'inventory')">
+                <input type="file" id="inventoryFile" accept=".xlsx, .xls" onchange="handleFileSelected(this, 'inventory')">
                 <div class="upload-prompt" id="inventoryPrompt">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <i class="fa-regular fa-file-excel"></i>
                     Glissez-déposez ou cliquez pour charger<br>
-                    <strong>Résultats_Inventaire_CHARIOT.csv</strong>
+                    <strong>Résultats_Inventaire_CHARIOT.xlsx</strong>
                 </div>
                 <div class="file-selected-info" id="inventoryInfo">
                     <i class="fa-solid fa-circle-check"></i>
-                    <div class="file-name" id="inventoryName">Fichier.csv</div>
+                    <div class="file-name" id="inventoryName">Fichier.xlsx</div>
                     <div class="file-size" id="inventorySize">0 KB</div>
                 </div>
             </div>
@@ -614,7 +604,7 @@
     <div class="control-panel">
         <div>
             <button class="btn btn-primary" id="btnProcess" onclick="processFiles()">
-                <i class="fa-solid fa-gears"></i> Consolider les données
+                <i class="fa-solid fa-calculator"></i> Consolider les données (.xlsx)
             </button>
         </div>
         <div id="statusMessage" class="status-message"></div>
@@ -655,7 +645,7 @@
     <div class="placeholder-empty" id="placeholderEmpty">
         <i class="fa-solid fa-table-list"></i>
         <h3>Aucune donnée consolidée</h3>
-        <p>Importez votre liste de mapping et vos résultats d'inventaire, puis cliquez sur "Consolider les données".</p>
+        <p>Importez vos deux fichiers Excel (.xlsx), puis cliquez sur "Consolider les données".</p>
     </div>
 
     <!-- Section d'affichage des Résultats -->
@@ -672,9 +662,9 @@
                     <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un article global..." oninput="filterResults()">
                 </div>
                 
-                <!-- Bouton d'exportation -->
-                <button class="btn btn-success" onclick="exportToCSV()">
-                    <i class="fa-solid fa-file-excel"></i> Exporter en CSV (Excel)
+                <!-- Bouton d'exportation au format XLSX natif -->
+                <button class="btn btn-success" onclick="exportToXLSX()">
+                    <i class="fa-solid fa-file-excel"></i> Exporter en Excel (.xlsx)
                 </button>
             </div>
         </div>
@@ -692,13 +682,13 @@
 </div>
 
 <script>
-    // Variables de stockage global
+    // Variables globales de stockage
     let currentConsolidatedData = null;
     let currentInvHeaders = [];
     let originalMappedCount = 0;
     let originalFilteredCount = 0;
 
-    // Gestion du glisser-déposer
+    // Gestion du style pour le glisser-déposer
     ['mappingWrapper', 'inventoryWrapper'].forEach(id => {
         const element = document.getElementById(id);
         
@@ -717,7 +707,7 @@
         });
     });
 
-    // Retour d'information visuel lors de l'import d'un fichier
+    // Retour d'information lors du choix des fichiers
     function handleFileSelected(input, type) {
         const file = input.files[0];
         const prompt = document.getElementById(type + 'Prompt');
@@ -731,7 +721,7 @@
             prompt.style.display = 'none';
             info.style.display = 'block';
             
-            // Masquer les résultats précédents s'ils changent de fichier
+            // Masquer les blocs de résultats si l'utilisateur change de fichier
             document.getElementById('resultSection').style.display = 'none';
             document.getElementById('statsGrid').style.display = 'none';
             document.getElementById('placeholderEmpty').style.display = 'block';
@@ -741,14 +731,30 @@
         }
     }
 
-    // Fonction utilitaire pour lire un fichier avec PapaParse
-    function parseCSV(file) {
+    // Lit un fichier Excel et retourne un tableau de lignes (2D Array)
+    function readExcelFile(file) {
         return new Promise((resolve, reject) => {
-            Papa.parse(file, {
-                complete: results => resolve(results.data),
-                error: err => reject(err),
-                skipEmptyLines: true
-            });
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // On prend la première feuille de calcul
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // On convertit la feuille en tableau 2D (lignes contenant des tableaux de cellules)
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                    resolve(rows);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = function(err) {
+                reject(err);
+            };
+            reader.readAsArrayBuffer(file);
         });
     }
 
@@ -765,130 +771,151 @@
         tableBody.innerHTML = "";
 
         if (!mappingFileInput || !inventoryFileInput) {
-            statusMessage.textContent = "Veuillez charger les deux fichiers CSV avant de lancer la consolidation.";
+            statusMessage.textContent = "Veuillez charger les deux fichiers Excel (.xlsx) avant de lancer la consolidation.";
             statusMessage.classList.add('status-error');
             return;
         }
 
         try {
-            const mappingData = await parseCSV(mappingFileInput);
-            const inventoryData = await parseCSV(inventoryFileInput);
+            // Lecture asynchrone des deux fichiers .xlsx
+            const mappingData = await readExcelFile(mappingFileInput);
+            const inventoryData = await readExcelFile(inventoryFileInput);
 
-            // 1. Extraire le dictionnaire de Mapping
+            // 1. Extraction robuste du dictionnaire de Mapping
             const mappingDict = {};
             let mappingHeaderFound = false;
             let codeIdxMap = -1, mappingIdxMap = -1;
 
             for (let i = 0; i < mappingData.length; i++) {
                 const row = mappingData[i];
+                if (!row || row.length === 0) continue;
+                
                 if (!mappingHeaderFound) {
-                    // Recherche de l'entête
+                    // Recherche de la ligne contenant les entêtes 'CODE ARTICLE' et 'MAPPING'
                     for (let j = 0; j < row.length; j++) {
-                        if (row[j] && row[j].trim().toUpperCase() === 'CODE ARTICLE') codeIdxMap = j;
-                        if (row[j] && row[j].trim().toUpperCase() === 'MAPPING') mappingIdxMap = j;
+                        if (row[j] !== undefined && row[j] !== null) {
+                            const valStr = row[j].toString().trim().toUpperCase();
+                            if (valStr === 'CODE ARTICLE' || valStr === 'CODE') codeIdxMap = j;
+                            if (valStr === 'MAPPING') mappingIdxMap = j;
+                        }
                     }
                     if (codeIdxMap !== -1 && mappingIdxMap !== -1) {
                         mappingHeaderFound = true;
-                        continue;
                     }
                 } else {
-                    const code = row[codeIdxMap] ? row[codeIdxMap].trim() : null;
-                    const mapName = row[mappingIdxMap] ? row[mappingIdxMap].trim() : null;
+                    const code = row[codeIdxMap] !== undefined && row[codeIdxMap] !== null ? row[codeIdxMap].toString().trim() : null;
+                    const mapName = row[mappingIdxMap] !== undefined && row[mappingIdxMap] !== null ? row[mappingIdxMap].toString().trim() : null;
                     if (code && mapName) {
                         mappingDict[code] = mapName;
                     }
                 }
             }
 
-            // Nombre total de codes mappés uniques
             originalMappedCount = Object.keys(mappingDict).length;
 
-            // 2. Traiter le fichier d'inventaire
+            if (!mappingHeaderFound || originalMappedCount === 0) {
+                statusMessage.textContent = "Erreur: Impossible de lire le mapping. Assurez-vous d'avoir les colonnes 'CODE ARTICLE' et 'MAPPING' dans le premier fichier.";
+                statusMessage.classList.add('status-error');
+                return;
+            }
+
+            // 2. Traitement du fichier d'inventaire
             let invHeaderRowIndex = -1;
             let invHeaders = [];
             
             // Trouver la ligne d'entête (qui contient 'Code') dans le fichier d'inventaire
             for (let i = 0; i < inventoryData.length; i++) {
-                if (inventoryData[i][0] && inventoryData[i][0].trim() === 'Code') {
+                const row = inventoryData[i];
+                if (row && row[0] !== undefined && row[0] !== null && row[0].toString().trim().toLowerCase() === 'code') {
                     invHeaderRowIndex = i;
-                    invHeaders = inventoryData[i];
+                    invHeaders = row;
                     break;
                 }
             }
 
             if (invHeaderRowIndex === -1) {
-                statusMessage.textContent = "Erreur: Impossible de trouver la colonne 'Code' servant de repère dans le fichier d'inventaire.";
+                statusMessage.textContent = "Erreur: Impossible de localiser la colonne 'Code' servant de repère dans votre fichier d'inventaire.";
                 statusMessage.classList.add('status-error');
                 return;
             }
 
-            // Conserver l'en-tête original
             currentInvHeaders = [...invHeaders];
 
-            // 3. Consolider les données (strictement selon vos calculs exacts)
+            // 3. Consolidation et calculs
             const consolidatedData = {};
             originalFilteredCount = 0;
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
                 const row = inventoryData[i];
-                const itemCode = row[0] ? row[0].trim() : null;
+                if (!row || row.length === 0) continue;
                 
-                // Règle de filtrage stricte : l'article DOIT se trouver dans la colonne mapping
+                const itemCode = row[0] !== undefined && row[0] !== null ? row[0].toString().trim() : null;
+                
+                // Règle d'or : On filtre UNIQUEMENT les articles présents dans la liste de mapping
                 if (itemCode && mappingDict[itemCode]) {
                     const groupName = mappingDict[itemCode];
                     originalFilteredCount++;
                     
-                    // Initialiser le groupe s'il n'existe pas encore
+                    // Initialisation du groupe s'il n'existe pas encore
                     if (!consolidatedData[groupName]) {
                         consolidatedData[groupName] = new Array(invHeaders.length).fill(0);
-                        consolidatedData[groupName][0] = groupName; // Première colonne : Nom global
+                        consolidatedData[groupName][0] = groupName; // Première colonne : Nom du mapping
                     }
 
                     // Additionner les colonnes numériques (en sautant Code, Désignation, Nature, Pump)
                     for (let col = 1; col < row.length; col++) {
-                        // Les colonnes de texte à ne pas sommer (Désignation, Nature, Pump)
+                        // Remplacer les textes Désignation, Nature, Pump par "-"
                         if (col === 1 || col === 2 || col === 3) {
                             consolidatedData[groupName][col] = "-"; 
                             continue;
                         }
                         
-                        // Analyse et conversion de la valeur
-                        let valText = row[col] ? row[col].replace(',', '.') : '0';
-                        let val = parseFloat(valText);
-                        
-                        if (!isNaN(val)) {
-                            consolidatedData[groupName][col] += val;
+                        // Parse robuste du chiffre
+                        let rawVal = row[col];
+                        let val = 0;
+                        if (rawVal !== undefined && rawVal !== null) {
+                            if (typeof rawVal === 'number') {
+                                val = rawVal;
+                            } else {
+                                let valText = rawVal.toString().replace(',', '.').trim();
+                                let parsed = parseFloat(valText);
+                                if (!isNaN(parsed)) {
+                                    val = parsed;
+                                }
+                            }
                         }
+                        
+                        consolidatedData[groupName][col] += val;
                     }
                 }
             }
 
             currentConsolidatedData = consolidatedData;
 
-            // 4. Générer l'affichage HTML dans le tableau sophistiqué
+            // 4. Générer le rendu du tableau HTML
             renderTable(consolidatedData);
 
-            // Mettre à jour les indicateurs statistiques
+            // Mettre à jour les indicateurs de synthèse
             document.getElementById('statMappedCount').textContent = originalMappedCount;
             document.getElementById('statFilteredCount').textContent = originalFilteredCount;
             document.getElementById('statGroupsCount').textContent = Object.keys(consolidatedData).length;
 
-            // Afficher les blocs de résultats
+            // Affichage des blocs masqués
             document.getElementById('placeholderEmpty').style.display = 'none';
             document.getElementById('statsGrid').style.display = 'grid';
             document.getElementById('resultSection').style.display = 'block';
 
-            // Afficher le statut de succès
-            statusMessage.textContent = "Consolidation réussie ! " + Object.keys(consolidatedData).length + " articles globaux consolidés.";
+            statusMessage.textContent = "Calcul de consolidation terminé avec succès ! " + Object.keys(consolidatedData).length + " groupes d'articles consolidés.";
             statusMessage.classList.add('status-success');
 
         } catch (error) {
-            statusMessage.textContent = "Une erreur s'est produite lors du traitement : " + error.message;
+            console.error(error);
+            statusMessage.textContent = "Une erreur s'est produite lors du traitement du fichier Excel : " + error.message;
             statusMessage.classList.add('status-error');
         }
     }
 
-    // Affichage des données dans la table
+    // Effectue le rendu du tableau HTML à partir d'un objet de données
     function renderTable(dataToDisplay) {
         const tableHead = document.getElementById('tableHead');
         const tableBody = document.getElementById('tableBody');
@@ -897,11 +924,11 @@
         tableBody.innerHTML = "";
 
         if (Object.keys(dataToDisplay).length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="' + currentInvHeaders.length + '" style="text-align: center; padding: 20px;">Aucun article trouvé pour cette recherche.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="' + currentInvHeaders.length + '" style="text-align: center; padding: 20px;">Aucune donnée consolidée trouvée.</td></tr>';
             return;
         }
 
-        // Création de l'entête du tableau
+        // Création de l'en-tête
         currentInvHeaders.forEach((header, index) => {
             let th = document.createElement('th');
             if (index === 0) {
@@ -910,7 +937,7 @@
                 th.textContent = header;
             }
             
-            // Appliquer les classes d'en-tête selon le type de données
+            // Appliquer les classes CSS appropriées
             if (index > 3) {
                 th.className = "num";
             } else if (index === 1 || index === 2 || index === 3) {
@@ -919,7 +946,7 @@
             tableHead.appendChild(th);
         });
 
-        // Remplissage du corps du tableau
+        // Remplissage du tableau
         for (const [groupName, rowData] of Object.entries(dataToDisplay)) {
             let trBody = document.createElement('tr');
             rowData.forEach((cellData, index) => {
@@ -931,12 +958,14 @@
                     td.textContent = cellData;
                     td.className = "text-center";
                 } else {
-                    // C'est un chiffre
+                    // Valeurs numériques sommées
                     if (typeof cellData === 'number') {
-                        td.textContent = cellData.toFixed(2);
+                        td.textContent = cellData.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         td.className = "num";
-                        // Petite touche visuelle : couleur rouge si écart négatif
-                        if (currentInvHeaders[index] && currentInvHeaders[index].toLowerCase().includes('ecart') && cellData < 0) {
+                        
+                        // Si c'est un écart négatif, l'afficher en couleur rouge
+                        const colHeader = currentInvHeaders[index] ? currentInvHeaders[index].toLowerCase() : '';
+                        if (colHeader.includes('ecart') && cellData < 0) {
                             td.style.color = '#dc2626';
                         }
                     } else {
@@ -950,7 +979,7 @@
         }
     }
 
-    // Filtrage dynamique en temps réel
+    // Filtrage dynamique lors de la recherche
     function filterResults() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
         if (!currentConsolidatedData) return;
@@ -969,50 +998,46 @@
         renderTable(filtered);
     }
 
-    // Exportation du tableau consolidé en CSV formaté pour Excel
-    function exportToCSV() {
+    // Exporte les données calculées dans un fichier Excel (.xlsx) natif
+    function exportToXLSX() {
         if (!currentConsolidatedData || Object.keys(currentConsolidatedData).length === 0) {
-            alert("Aucune donnée disponible à l'export.");
+            alert("Aucune donnée disponible pour l'export.");
             return;
         }
 
-        // BOM UTF-8 pour que Excel en français ouvre directement les caractères spéciaux et accents
-        let csvContent = "﻿";
-
-        // Génération de la ligne d'en-tête (séparateur point-virgule pour Excel FR)
+        // Créer l'en-tête
         const headers = [...currentInvHeaders];
         headers[0] = 'Mapping (Article Global)';
-        csvContent += headers.map(h => `"${h.replace(/"/g, '""')}"`).join(";") + "
-";
 
-        // Génération des lignes de données
+        const rows = [headers];
+
+        // Construire les lignes de données formatées de façon appropriée pour Excel
         for (const [groupName, rowData] of Object.entries(currentConsolidatedData)) {
-            const rowCells = rowData.map((cellData, index) => {
+            const formattedRow = rowData.map((cellData, index) => {
                 if (index === 1 || index === 2 || index === 3) {
-                    return `"-"`;
+                    return "-";
                 }
                 if (typeof cellData === 'number') {
-                    // Remplacement du point par la virgule pour la compatibilité Excel français
-                    return `"${cellData.toFixed(2).replace('.', ',')}"`;
+                    // Retourner des nombres réels arrondis pour préserver les formules Excel
+                    return Math.round(cellData * 100) / 100;
                 }
-                return `"${(cellData || '').toString().replace(/"/g, '""')}"`;
+                return cellData;
             });
-            csvContent += rowCells.join(";") + "
-";
+            rows.push(formattedRow);
         }
 
-        // Création et téléchargement du fichier
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        
-        // Nom du fichier contenant la date du jour
+        // Création du classeur et de la feuille XLSX
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+
+        // Ajout de la feuille au classeur
+        XLSX.utils.book_append_sheet(wb, ws, "Inventaire Consolidé");
+
+        // Format de date du jour pour le nom du fichier
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        link.setAttribute("download", `Inventaire_Consolide_Mapping_${dateStr}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        
+        // Sauvegarde immédiate
+        XLSX.writeFile(wb, `Inventaire_Consolide_Mapping_${dateStr}.xlsx`);
     }
 </script>
 
