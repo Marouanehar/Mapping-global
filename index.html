@@ -3,758 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consolidation d'Inventaire & Mapping Excel (XLSX)</title>
-    <!-- Chargement de SheetJS (xlsx.full.min.js) pour lire et écrire les fichiers Excel natifs (.xlsx) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Chargement de FontAwesome pour des icônes modernes -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>Outil de Mapping & Consolidation d'Inventaire</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
-            --slate-50: #f8fafc;
-            --slate-100: #f1f5f9;
-            --slate-200: #e2e8f0;
-            --slate-300: #cbd5e1;
-            --slate-700: #334155;
-            --slate-800: #1e293b;
-            --slate-900: #0f172a;
-            
-            --blue-50: #eff6ff;
-            --blue-100: #dbeafe;
-            --blue-600: #1e40af;
-            --blue-700: #1d4ed8;
-            
-            --emerald-50: #ecfdf5;
-            --emerald-100: #d1fae5;
-            --emerald-600: #059669;
-            --emerald-700: #047857;
-
-            --amber-50: #fffbeb;
-            --amber-100: #fef3c7;
-            --amber-600: #d97706;
-
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --bg-color: #f8f9fa;
+            --border-color: #dee2e6;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--slate-100);
-            color: var(--slate-800);
-            line-height: 1.5;
-            padding: 30px 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
         }
-
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-        }
-
-        /* En-tête */
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(135deg, var(--slate-900), var(--slate-800));
-            color: white;
-            padding: 24px 32px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            margin-bottom: 24px;
-        }
-
-        .header-title h1 {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-title h1 i {
-            color: #f59e0b;
-        }
-
-        .header-title p {
-            color: var(--slate-300);
-            font-size: 14px;
-        }
-
-        .badge-version {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--blue-100);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Section de chargement des fichiers */
-        .upload-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .dropzone-card {
             background: white;
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--slate-200);
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-
-        .dropzone-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+        h1, h2 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
         }
-
-        .dropzone-header {
+        .upload-section {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
         }
-
-        .dropzone-icon-wrapper {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
+        .file-input-group {
+            flex: 1;
+            min-width: 300px;
+            background: var(--bg-color);
+            padding: 20px;
+            border: 1px dashed var(--secondary-color);
+            border-radius: 6px;
         }
-
-        .mapping-icon {
-            background-color: var(--blue-50);
-            color: var(--blue-600);
-        }
-
-        .inventory-icon {
-            background-color: var(--amber-50);
-            color: var(--amber-600);
-        }
-
-        .dropzone-header h3 {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--slate-900);
-        }
-
-        /* Zone d'import */
-        .file-input-wrapper {
-            position: relative;
-            border: 2px dashed var(--slate-300);
-            border-radius: var(--radius-md);
-            padding: 30px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background-color: var(--slate-50);
-        }
-
-        .file-input-wrapper:hover, .file-input-wrapper.dragover {
-            border-color: var(--blue-600);
-            background-color: var(--blue-50);
-        }
-
-        .file-input-wrapper input[type="file"] {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .upload-prompt {
-            color: var(--slate-700);
-            font-size: 14px;
-        }
-
-        .upload-prompt i {
-            font-size: 32px;
-            color: var(--slate-300);
-            margin-bottom: 12px;
+        label {
             display: block;
-            transition: color 0.2s;
-        }
-
-        .file-input-wrapper:hover .upload-prompt i {
-            color: var(--blue-600);
-        }
-
-        .file-selected-info {
-            display: none;
-            text-align: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .file-selected-info i {
-            font-size: 32px;
-            color: var(--emerald-600);
+            font-weight: bold;
             margin-bottom: 10px;
-            display: block;
         }
-
-        .file-name {
-            font-weight: 600;
-            color: var(--slate-900);
-            font-size: 14px;
-            word-break: break-all;
-            margin-bottom: 4px;
-        }
-
-        .file-size {
-            font-size: 12px;
-            color: var(--slate-700);
-        }
-
-        /* Actions et Messages */
-        .control-panel {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 20px 32px;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--slate-200);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: var(--radius-md);
+        button {
+            background-color: var(--secondary-color);
+            color: white;
             border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary {
-            background-color: var(--blue-600);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--blue-700);
-            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
-        }
-
-        .btn-success {
-            background-color: var(--emerald-600);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background-color: var(--emerald-700);
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-        }
-
-        .status-message {
-            font-size: 14px;
-            font-weight: 500;
-            padding: 10px 16px;
-            border-radius: var(--radius-md);
-            display: none;
             width: 100%;
+            font-weight: bold;
+            transition: background 0.3s;
         }
-
-        .status-error {
-            background-color: #fef2f2;
-            color: #b91c1c;
-            border: 1px solid #fca5a5;
-            display: block;
+        button:hover {
+            background-color: #2980b9;
         }
-
-        .status-success {
-            background-color: var(--emerald-50);
-            color: var(--emerald-700);
-            border: 1px solid var(--emerald-100);
-            display: block;
-        }
-
-        /* Cartes Statistiques */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-            display: none; /* Affiché uniquement après calcul */
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: var(--radius-md);
-            padding: 16px 20px;
-            border: 1px solid var(--slate-200);
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .stat-icon-blue { background-color: var(--blue-50); color: var(--blue-600); }
-        .stat-icon-emerald { background-color: var(--emerald-50); color: var(--emerald-600); }
-        .stat-icon-amber { background-color: var(--amber-50); color: var(--amber-600); }
-
-        .stat-info h4 {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--slate-700);
-            margin-bottom: 2px;
-        }
-
-        .stat-info p {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--slate-900);
-        }
-
-        /* Section Résultats et Recherche */
-        .result-section {
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--slate-200);
-            overflow: hidden;
-            display: none; /* Affiché après traitement */
-        }
-
-        .result-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--slate-200);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-            background-color: var(--slate-50);
-        }
-
-        .result-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--slate-900);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .search-wrapper {
-            position: relative;
-            width: 300px;
-        }
-
-        .search-wrapper i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--slate-700);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 12px 10px 36px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--slate-300);
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .search-input:focus {
-            border-color: var(--blue-600);
-        }
-
-        /* Tableau */
         .table-responsive {
-            max-height: 500px;
-            overflow-y: auto;
-            position: relative;
+            overflow-x: auto;
+            margin-top: 20px;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
-            text-align: left;
+            font-size: 14px;
         }
-
-        thead {
+        th, td {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            text-align: right;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
             position: sticky;
             top: 0;
-            z-index: 10;
         }
-
-        th {
-            background-color: var(--slate-900);
-            color: white;
-            font-weight: 600;
-            padding: 14px 16px;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            background-color: #f1f3f5;
         }
-
-        td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--slate-200);
-            color: var(--slate-800);
-            white-space: nowrap;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tbody tr:nth-child(even) {
-            background-color: var(--slate-50);
-        }
-
-        tbody tr:hover {
-            background-color: var(--blue-50);
-        }
-
-        /* Fixation de la première colonne (Mapping Global) */
-        td:first-child, th:first-child {
-            position: sticky;
-            left: 0;
-            background-color: white;
-            font-weight: 700;
-            z-index: 5;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-            color: var(--slate-900);
-        }
-        
-        tbody tr:nth-child(even) td:first-child {
-            background-color: var(--slate-50);
-        }
-
-        tbody tr:hover td:first-child {
-            background-color: var(--blue-50);
-        }
-
-        /* Alignements */
-        td.num, th.num {
-            text-align: right;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            font-weight: 600;
-        }
-
-        td.text-center, th.text-center {
-            text-align: center;
-            color: var(--slate-700);
-        }
-
-        /* Placeholder initial */
-        .placeholder-empty {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 60px 40px;
-            text-align: center;
-            border: 1px dashed var(--slate-300);
-            color: var(--slate-700);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .placeholder-empty i {
-            font-size: 48px;
-            color: var(--slate-300);
-            margin-bottom: 16px;
-        }
-
-        .placeholder-empty h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-            color: var(--slate-800);
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animated {
-            animation: fadeIn 0.4s ease forwards;
-        }
-
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .control-panel {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .search-wrapper {
-                width: 100%;
-            }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <h1>Consolidation d'Inventaire par Mapping</h1>
     
-    <!-- En-tête -->
-    <header>
-        <div class="header-title">
-            <h1><i class="fa-solid fa-file-excel"></i> Mapping & Consolidation XLSX</h1>
-            <p>Outil d'intégration GitHub traitant directement les fichiers natifs Excel (.xlsx)</p>
+    <div class="upload-section">
+        <div class="file-input-group">
+            <label for="mappingFile">1. Fichier de Mapping (LISTE DES PRODUITS CHAR.csv)</label>
+            <input type="file" id="mappingFile" accept=".csv">
         </div>
-        <div class="badge-version">v3.0 - Spécial Excel</div>
-    </header>
-
-    <!-- Zone de chargement des fichiers Excel -->
-    <div class="upload-grid">
         
-        <!-- Fichier 1: LISTE DES PRODUITS CHAR (Mapping) -->
-        <div class="dropzone-card">
-            <div class="dropzone-header">
-                <div class="dropzone-icon-wrapper mapping-icon">
-                    <i class="fa-solid fa-sitemap"></i>
-                </div>
-                <h3>1. Liste de Mapping</h3>
-            </div>
-            
-            <div class="file-input-wrapper" id="mappingWrapper">
-                <input type="file" id="mappingFile" accept=".xlsx, .xls" onchange="handleFileSelected(this, 'mapping')">
-                <div class="upload-prompt" id="mappingPrompt">
-                    <i class="fa-regular fa-file-excel"></i>
-                    Glissez-déposez ou cliquez pour charger<br>
-                    <strong>LISTE DES PRODUITS CHAR.xlsx</strong>
-                </div>
-                <div class="file-selected-info" id="mappingInfo">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <div class="file-name" id="mappingName">Fichier.xlsx</div>
-                    <div class="file-size" id="mappingSize">0 KB</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Fichier 2: Résultats d'Inventaire -->
-        <div class="dropzone-card">
-            <div class="dropzone-header">
-                <div class="dropzone-icon-wrapper inventory-icon">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </div>
-                <h3>2. Résultats d'Inventaire</h3>
-            </div>
-            
-            <div class="file-input-wrapper" id="inventoryWrapper">
-                <input type="file" id="inventoryFile" accept=".xlsx, .xls" onchange="handleFileSelected(this, 'inventory')">
-                <div class="upload-prompt" id="inventoryPrompt">
-                    <i class="fa-regular fa-file-excel"></i>
-                    Glissez-déposez ou cliquez pour charger<br>
-                    <strong>Résultats_Inventaire_CHARIOT.xlsx</strong>
-                </div>
-                <div class="file-selected-info" id="inventoryInfo">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <div class="file-name" id="inventoryName">Fichier.xlsx</div>
-                    <div class="file-size" id="inventorySize">0 KB</div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Barre d'actions et messages -->
-    <div class="control-panel">
-        <div>
-            <button class="btn btn-primary" id="btnProcess" onclick="processFiles()">
-                <i class="fa-solid fa-calculator"></i> Consolider les données (.xlsx)
-            </button>
-        </div>
-        <div id="statusMessage" class="status-message"></div>
-    </div>
-
-    <!-- Cartes statistiques d'inventaire -->
-    <div class="stats-grid animated" id="statsGrid">
-        <div class="stat-card">
-            <div class="stat-icon stat-icon-blue">
-                <i class="fa-solid fa-link"></i>
-            </div>
-            <div class="stat-info">
-                <h4>Articles Mappés</h4>
-                <p id="statMappedCount">0</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon-amber">
-                <i class="fa-solid fa-filter"></i>
-            </div>
-            <div class="stat-info">
-                <h4>Sélectionnés pour Calcul</h4>
-                <p id="statFilteredCount">0</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon stat-icon-emerald">
-                <i class="fa-solid fa-layer-group"></i>
-            </div>
-            <div class="stat-info">
-                <h4>Groupes Consolidés</h4>
-                <p id="statGroupsCount">0</p>
-            </div>
+        <div class="file-input-group">
+            <label for="inventoryFile">2. Fichier d'Inventaire (Résultats_Inventaire_CHARIOT.csv)</label>
+            <input type="file" id="inventoryFile" accept=".csv">
         </div>
     </div>
 
-    <!-- Placeholder d'attente -->
-    <div class="placeholder-empty" id="placeholderEmpty">
-        <i class="fa-solid fa-table-list"></i>
-        <h3>Aucune donnée consolidée</h3>
-        <p>Importez vos deux fichiers Excel (.xlsx), puis cliquez sur "Consolider les données".</p>
+    <button onclick="processFiles()">Générer le Tableau Consolidé</button>
+    <div id="statusMessage" class="error"></div>
+
+    <div class="table-responsive">
+        <table id="resultTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
     </div>
-
-    <!-- Section d'affichage des Résultats -->
-    <div class="result-section animated" id="resultSection">
-        <div class="result-header">
-            <div class="result-title">
-                <i class="fa-solid fa-table-cells-large"></i> Aperçu de l'inventaire consolidé
-            </div>
-            
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                <!-- Recherche en temps réel -->
-                <div class="search-wrapper">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Rechercher un article global..." oninput="filterResults()">
-                </div>
-                
-                <!-- Bouton d'exportation au format XLSX natif -->
-                <button class="btn btn-success" onclick="exportToXLSX()">
-                    <i class="fa-solid fa-file-excel"></i> Exporter en Excel (.xlsx)
-                </button>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table id="resultTable">
-                <thead>
-                    <tr id="tableHead"></tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
 </div>
 
 <script>
-    // Variables globales de stockage
-    let currentConsolidatedData = null;
-    let currentInvHeaders = [];
-    let originalMappedCount = 0;
-    let originalFilteredCount = 0;
-
-    // Gestion du style pour le glisser-déposer
-    ['mappingWrapper', 'inventoryWrapper'].forEach(id => {
-        const element = document.getElementById(id);
-        
-        element.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            element.classList.add('dragover');
-        });
-
-        element.addEventListener('dragleave', () => {
-            element.classList.remove('dragover');
-        });
-
-        element.addEventListener('drop', (e) => {
-            e.preventDefault();
-            element.classList.remove('dragover');
-        });
-    });
-
-    // Retour d'information lors du choix des fichiers
-    function handleFileSelected(input, type) {
-        const file = input.files[0];
-        const prompt = document.getElementById(type + 'Prompt');
-        const info = document.getElementById(type + 'Info');
-        const nameEl = document.getElementById(type + 'Name');
-        const sizeEl = document.getElementById(type + 'Size');
-
-        if (file) {
-            nameEl.textContent = file.name;
-            sizeEl.textContent = (file.size / 1024).toFixed(1) + " KB";
-            prompt.style.display = 'none';
-            info.style.display = 'block';
-            
-            // Masquer les blocs de résultats si l'utilisateur change de fichier
-            document.getElementById('resultSection').style.display = 'none';
-            document.getElementById('statsGrid').style.display = 'none';
-            document.getElementById('placeholderEmpty').style.display = 'block';
-        } else {
-            prompt.style.display = 'block';
-            info.style.display = 'none';
-        }
-    }
-
-    // Lit un fichier Excel et retourne un tableau de lignes (2D Array)
-    function readExcelFile(file) {
+    // Fonction utilitaire pour lire un fichier avec PapaParse
+    function parseCSV(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    // On prend la première feuille de calcul
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // On convertit la feuille en tableau 2D (lignes contenant des tableaux de cellules)
-                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
-                    resolve(rows);
-                } catch (err) {
-                    reject(err);
-                }
-            };
-            reader.onerror = function(err) {
-                reject(err);
-            };
-            reader.readAsArrayBuffer(file);
+            Papa.parse(file, {
+                complete: results => resolve(results.data),
+                error: err => reject(err),
+                skipEmptyLines: true
+            });
         });
     }
 
@@ -765,279 +145,129 @@
         const tableHead = document.getElementById('tableHead');
         const tableBody = document.getElementById('tableBody');
 
-        statusMessage.className = "status-message";
-        statusMessage.style.display = "none";
+        statusMessage.textContent = "";
         tableHead.innerHTML = "";
         tableBody.innerHTML = "";
 
         if (!mappingFileInput || !inventoryFileInput) {
-            statusMessage.textContent = "Veuillez charger les deux fichiers Excel (.xlsx) avant de lancer la consolidation.";
-            statusMessage.classList.add('status-error');
+            statusMessage.textContent = "Veuillez charger les deux fichiers CSV avant de lancer le calcul.";
             return;
         }
 
         try {
-            // Lecture asynchrone des deux fichiers .xlsx
-            const mappingData = await readExcelFile(mappingFileInput);
-            const inventoryData = await readExcelFile(inventoryFileInput);
+            const mappingData = await parseCSV(mappingFileInput);
+            const inventoryData = await parseCSV(inventoryFileInput);
 
-            // 1. Extraction robuste du dictionnaire de Mapping
+            // 1. Extraire le dictionnaire de Mapping
             const mappingDict = {};
             let mappingHeaderFound = false;
             let codeIdxMap = -1, mappingIdxMap = -1;
 
             for (let i = 0; i < mappingData.length; i++) {
                 const row = mappingData[i];
-                if (!row || row.length === 0) continue;
-                
                 if (!mappingHeaderFound) {
-                    // Recherche de la ligne contenant les entêtes 'CODE ARTICLE' et 'MAPPING'
+                    // Recherche de l'entête
                     for (let j = 0; j < row.length; j++) {
-                        if (row[j] !== undefined && row[j] !== null) {
-                            const valStr = row[j].toString().trim().toUpperCase();
-                            if (valStr === 'CODE ARTICLE' || valStr === 'CODE') codeIdxMap = j;
-                            if (valStr === 'MAPPING') mappingIdxMap = j;
-                        }
+                        if (row[j] && row[j].trim().toUpperCase() === 'CODE ARTICLE') codeIdxMap = j;
+                        if (row[j] && row[j].trim().toUpperCase() === 'MAPPING') mappingIdxMap = j;
                     }
                     if (codeIdxMap !== -1 && mappingIdxMap !== -1) {
                         mappingHeaderFound = true;
+                        continue;
                     }
                 } else {
-                    const code = row[codeIdxMap] !== undefined && row[codeIdxMap] !== null ? row[codeIdxMap].toString().trim() : null;
-                    const mapName = row[mappingIdxMap] !== undefined && row[mappingIdxMap] !== null ? row[mappingIdxMap].toString().trim() : null;
+                    const code = row[codeIdxMap] ? row[codeIdxMap].trim() : null;
+                    const mapName = row[mappingIdxMap] ? row[mappingIdxMap].trim() : null;
                     if (code && mapName) {
                         mappingDict[code] = mapName;
                     }
                 }
             }
 
-            originalMappedCount = Object.keys(mappingDict).length;
-
-            if (!mappingHeaderFound || originalMappedCount === 0) {
-                statusMessage.textContent = "Erreur: Impossible de lire le mapping. Assurez-vous d'avoir les colonnes 'CODE ARTICLE' et 'MAPPING' dans le premier fichier.";
-                statusMessage.classList.add('status-error');
-                return;
-            }
-
-            // 2. Traitement du fichier d'inventaire
+            // 2. Traiter le fichier d'inventaire
             let invHeaderRowIndex = -1;
             let invHeaders = [];
             
-            // Trouver la ligne d'entête (qui contient 'Code') dans le fichier d'inventaire
+            // Trouver la ligne d'entête (qui contient 'Code')
             for (let i = 0; i < inventoryData.length; i++) {
-                const row = inventoryData[i];
-                if (row && row[0] !== undefined && row[0] !== null && row[0].toString().trim().toLowerCase() === 'code') {
+                if (inventoryData[i][0] && inventoryData[i][0].trim() === 'Code') {
                     invHeaderRowIndex = i;
-                    invHeaders = row;
+                    invHeaders = inventoryData[i];
                     break;
                 }
             }
 
             if (invHeaderRowIndex === -1) {
-                statusMessage.textContent = "Erreur: Impossible de localiser la colonne 'Code' servant de repère dans votre fichier d'inventaire.";
-                statusMessage.classList.add('status-error');
+                statusMessage.textContent = "Erreur: Impossible de trouver la colonne 'Code' dans le fichier d'inventaire.";
                 return;
             }
 
-            currentInvHeaders = [...invHeaders];
-
-            // 3. Consolidation et calculs
+            // 3. Consolider les données
             const consolidatedData = {};
-            originalFilteredCount = 0;
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
                 const row = inventoryData[i];
-                if (!row || row.length === 0) continue;
+                const itemCode = row[0] ? row[0].trim() : null;
                 
-                const itemCode = row[0] !== undefined && row[0] !== null ? row[0].toString().trim() : null;
-                
-                // Règle d'or : On filtre UNIQUEMENT les articles présents dans la liste de mapping
+                // Si le code existe dans notre mapping, on le traite. Sinon, on l'ignore (règle stricte).
                 if (itemCode && mappingDict[itemCode]) {
                     const groupName = mappingDict[itemCode];
-                    originalFilteredCount++;
                     
-                    // Initialisation du groupe s'il n'existe pas encore
+                    // Initialiser le groupe s'il n'existe pas encore
                     if (!consolidatedData[groupName]) {
                         consolidatedData[groupName] = new Array(invHeaders.length).fill(0);
-                        consolidatedData[groupName][0] = groupName; // Première colonne : Nom du mapping
+                        consolidatedData[groupName][0] = groupName; // Colonne Code/Nom
                     }
 
                     // Additionner les colonnes numériques (en sautant Code, Désignation, Nature, Pump)
                     for (let col = 1; col < row.length; col++) {
-                        // Remplacer les textes Désignation, Nature, Pump par "-"
+                        // Les colonnes de texte à ne pas sommer (Désignation, Nature, Pump)
                         if (col === 1 || col === 2 || col === 3) {
                             consolidatedData[groupName][col] = "-"; 
                             continue;
                         }
                         
-                        // Parse robuste du chiffre
-                        let rawVal = row[col];
-                        let val = 0;
-                        if (rawVal !== undefined && rawVal !== null) {
-                            if (typeof rawVal === 'number') {
-                                val = rawVal;
-                            } else {
-                                let valText = rawVal.toString().replace(',', '.').trim();
-                                let parsed = parseFloat(valText);
-                                if (!isNaN(parsed)) {
-                                    val = parsed;
-                                }
-                            }
-                        }
+                        // Parse de la valeur en remplaçant les virgules par des points pour les décimales
+                        let valText = row[col] ? row[col].replace(',', '.') : '0';
+                        let val = parseFloat(valText);
                         
-                        consolidatedData[groupName][col] += val;
+                        if (!isNaN(val)) {
+                            consolidatedData[groupName][col] += val;
+                        }
                     }
                 }
             }
 
-            currentConsolidatedData = consolidatedData;
-
-            // 4. Générer le rendu du tableau HTML
-            renderTable(consolidatedData);
-
-            // Mettre à jour les indicateurs de synthèse
-            document.getElementById('statMappedCount').textContent = originalMappedCount;
-            document.getElementById('statFilteredCount').textContent = originalFilteredCount;
-            document.getElementById('statGroupsCount').textContent = Object.keys(consolidatedData).length;
-
-            // Affichage des blocs masqués
-            document.getElementById('placeholderEmpty').style.display = 'none';
-            document.getElementById('statsGrid').style.display = 'grid';
-            document.getElementById('resultSection').style.display = 'block';
-
-            statusMessage.textContent = "Calcul de consolidation terminé avec succès ! " + Object.keys(consolidatedData).length + " groupes d'articles consolidés.";
-            statusMessage.classList.add('status-success');
-
-        } catch (error) {
-            console.error(error);
-            statusMessage.textContent = "Une erreur s'est produite lors du traitement du fichier Excel : " + error.message;
-            statusMessage.classList.add('status-error');
-        }
-    }
-
-    // Effectue le rendu du tableau HTML à partir d'un objet de données
-    function renderTable(dataToDisplay) {
-        const tableHead = document.getElementById('tableHead');
-        const tableBody = document.getElementById('tableBody');
-        
-        tableHead.innerHTML = "";
-        tableBody.innerHTML = "";
-
-        if (Object.keys(dataToDisplay).length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="' + currentInvHeaders.length + '" style="text-align: center; padding: 20px;">Aucune donnée consolidée trouvée.</td></tr>';
-            return;
-        }
-
-        // Création de l'en-tête
-        currentInvHeaders.forEach((header, index) => {
-            let th = document.createElement('th');
-            if (index === 0) {
-                th.textContent = 'Mapping (Article Global)';
-            } else {
-                th.textContent = header;
-            }
+            // 4. Générer l'affichage HTML
             
-            // Appliquer les classes CSS appropriées
-            if (index > 3) {
-                th.className = "num";
-            } else if (index === 1 || index === 2 || index === 3) {
-                th.className = "text-center";
-            }
-            tableHead.appendChild(th);
-        });
+            // Création de l'entête
+            let trHead = document.createElement('tr');
+            invHeaders.forEach((header, index) => {
+                let th = document.createElement('th');
+                th.textContent = index === 0 ? 'Mapping (Article Global)' : header;
+                trHead.appendChild(th);
+            });
+            tableHead.appendChild(trHead);
 
-        // Remplissage du tableau
-        for (const [groupName, rowData] of Object.entries(dataToDisplay)) {
-            let trBody = document.createElement('tr');
-            rowData.forEach((cellData, index) => {
-                let td = document.createElement('td');
-                
-                if (index === 0) {
-                    td.textContent = cellData;
-                } else if (index === 1 || index === 2 || index === 3) {
-                    td.textContent = cellData;
-                    td.className = "text-center";
-                } else {
-                    // Valeurs numériques sommées
-                    if (typeof cellData === 'number') {
-                        td.textContent = cellData.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        td.className = "num";
-                        
-                        // Si c'est un écart négatif, l'afficher en couleur rouge
-                        const colHeader = currentInvHeaders[index] ? currentInvHeaders[index].toLowerCase() : '';
-                        if (colHeader.includes('ecart') && cellData < 0) {
-                            td.style.color = '#dc2626';
-                        }
+            // Création du corps du tableau
+            for (const [groupName, rowData] of Object.entries(consolidatedData)) {
+                let trBody = document.createElement('tr');
+                rowData.forEach((cellData, index) => {
+                    let td = document.createElement('td');
+                    // Formatage des nombres à 2 décimales si c'est un flottant
+                    if (typeof cellData === 'number' && index > 3) {
+                        td.textContent = cellData.toFixed(2);
                     } else {
                         td.textContent = cellData;
-                        td.className = "num";
                     }
-                }
-                trBody.appendChild(td);
-            });
-            tableBody.appendChild(trBody);
-        }
-    }
-
-    // Filtrage dynamique lors de la recherche
-    function filterResults() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-        if (!currentConsolidatedData) return;
-
-        if (searchTerm === "") {
-            renderTable(currentConsolidatedData);
-            return;
-        }
-
-        const filtered = {};
-        for (const [groupName, rowData] of Object.entries(currentConsolidatedData)) {
-            if (groupName.toLowerCase().includes(searchTerm)) {
-                filtered[groupName] = rowData;
+                    trBody.appendChild(td);
+                });
+                tableBody.appendChild(trBody);
             }
+
+        } catch (error) {
+            statusMessage.textContent = "Une erreur s'est produite lors de la lecture des fichiers : " + error.message;
         }
-        renderTable(filtered);
-    }
-
-    // Exporte les données calculées dans un fichier Excel (.xlsx) natif
-    function exportToXLSX() {
-        if (!currentConsolidatedData || Object.keys(currentConsolidatedData).length === 0) {
-            alert("Aucune donnée disponible pour l'export.");
-            return;
-        }
-
-        // Créer l'en-tête
-        const headers = [...currentInvHeaders];
-        headers[0] = 'Mapping (Article Global)';
-
-        const rows = [headers];
-
-        // Construire les lignes de données formatées de façon appropriée pour Excel
-        for (const [groupName, rowData] of Object.entries(currentConsolidatedData)) {
-            const formattedRow = rowData.map((cellData, index) => {
-                if (index === 1 || index === 2 || index === 3) {
-                    return "-";
-                }
-                if (typeof cellData === 'number') {
-                    // Retourner des nombres réels arrondis pour préserver les formules Excel
-                    return Math.round(cellData * 100) / 100;
-                }
-                return cellData;
-            });
-            rows.push(formattedRow);
-        }
-
-        // Création du classeur et de la feuille XLSX
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-
-        // Ajout de la feuille au classeur
-        XLSX.utils.book_append_sheet(wb, ws, "Inventaire Consolidé");
-
-        // Format de date du jour pour le nom du fichier
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        
-        // Sauvegarde immédiate
-        XLSX.writeFile(wb, `Inventaire_Consolide_Mapping_${dateStr}.xlsx`);
     }
 </script>
 
