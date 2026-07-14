@@ -3,120 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outil de Mapping & Consolidation d'Inventaire</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <title>Dashboard | Consolidation d'Inventaire</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --bg-color: #f8f9fa;
-            --border-color: #dee2e6;
+            --primary-color: #1e293b;
+            --secondary-color: #3b82f6;
+            --success-color: #10b981;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #334155;
+            --text-muted: #64748b;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: var(--bg-color);
-            color: var(--primary-color);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 30px 20px;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
         }
-        h1, h2 {
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-        }
-        .upload-section {
-            display: flex;
-            gap: 20px;
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin-top: 0;
             margin-bottom: 30px;
-            flex-wrap: wrap;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
         }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
         .file-input-group {
-            flex: 1;
-            min-width: 300px;
-            background: var(--bg-color);
-            padding: 20px;
-            border: 1px dashed var(--secondary-color);
-            border-radius: 6px;
+            background: #f8fafc;
+            padding: 25px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
+
+        .file-input-group:hover {
+            border-color: var(--secondary-color);
+            background: #eff6ff;
+        }
+
         label {
             display: block;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 0.95rem;
         }
+
+        input[type="file"] {
+            width: 100%;
+            color: var(--text-muted);
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
         button {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-process {
             background-color: var(--secondary-color);
             color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
-            transition: background 0.3s;
         }
-        button:hover {
-            background-color: #2980b9;
+
+        .btn-process:hover { background-color: #2563eb; }
+
+        .btn-export {
+            background-color: var(--success-color);
+            color: white;
+            display: none; /* Masqué par défaut, affiché après le calcul */
         }
+
+        .btn-export:hover { background-color: #059669; }
+
+        button:active { transform: scale(0.98); }
+
+        .status {
+            font-weight: 500;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .status.error {
+            display: block;
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #f87171;
+        }
+
+        .status.success {
+            display: block;
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #34d399;
+        }
+
         .table-responsive {
             overflow-x: auto;
-            margin-top: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            white-space: nowrap;
         }
+
         th, td {
-            padding: 10px;
-            border: 1px solid var(--border-color);
+            padding: 12px 15px;
             text-align: right;
+            border-bottom: 1px solid var(--border-color);
         }
+
         th {
-            background-color: var(--primary-color);
-            color: white;
+            background-color: #f8fafc;
+            color: var(--primary-color);
+            font-weight: 600;
             text-align: center;
             position: sticky;
             top: 0;
+            border-bottom: 2px solid var(--border-color);
         }
+
         td:first-child {
             text-align: left;
-            font-weight: bold;
-            background-color: #f1f3f5;
+            font-weight: 600;
+            background-color: #f8fafc;
+            color: var(--primary-color);
         }
-        .error {
-            color: #e74c3c;
-            font-weight: bold;
-            margin-top: 10px;
+
+        tr:hover td {
+            background-color: #f1f5f9;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Consolidation d'Inventaire par Mapping</h1>
+    <h1>Dashboard | Consolidation d'Inventaire</h1>
     
     <div class="upload-section">
         <div class="file-input-group">
-            <label for="mappingFile">1. Fichier de Mapping (LISTE DES PRODUITS CHAR.csv)</label>
-            <input type="file" id="mappingFile" accept=".csv">
+            <label for="mappingFile">📁 1. Fichier de Mapping (.xlsx)</label>
+            <input type="file" id="mappingFile" accept=".xlsx, .xls">
         </div>
         
         <div class="file-input-group">
-            <label for="inventoryFile">2. Fichier d'Inventaire (Résultats_Inventaire_CHARIOT.csv)</label>
-            <input type="file" id="inventoryFile" accept=".csv">
+            <label for="inventoryFile">📁 2. Fichier d'Inventaire (.xlsx)</label>
+            <input type="file" id="inventoryFile" accept=".xlsx, .xls">
         </div>
     </div>
 
-    <button onclick="processFiles()">Générer le Tableau Consolidé</button>
-    <div id="statusMessage" class="error"></div>
+    <div class="actions">
+        <button class="btn-process" onclick="processFiles()">⚙️ Générer le Tableau Consolidé</button>
+        <button id="exportBtn" class="btn-export" onclick="exportToExcel()">💾 Exporter vers Excel</button>
+    </div>
+    
+    <div id="statusMessage" class="status"></div>
 
     <div class="table-responsive">
         <table id="resultTable">
@@ -127,14 +211,29 @@
 </div>
 
 <script>
-    // Fonction utilitaire pour lire un fichier avec PapaParse
-    function parseCSV(file) {
+    // Variable globale pour stocker les données prêtes à être exportées
+    let exportData = [];
+
+    // Fonction utilitaire pour lire un fichier Excel avec SheetJS
+    function readExcel(file) {
         return new Promise((resolve, reject) => {
-            Papa.parse(file, {
-                complete: results => resolve(results.data),
-                error: err => reject(err),
-                skipEmptyLines: true
-            });
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    // Prendre la première feuille du classeur
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // Convertir en tableau 2D (similaire à la sortie de PapaParse)
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    resolve(json);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsArrayBuffer(file);
         });
     }
 
@@ -144,19 +243,26 @@
         const statusMessage = document.getElementById('statusMessage');
         const tableHead = document.getElementById('tableHead');
         const tableBody = document.getElementById('tableBody');
+        const exportBtn = document.getElementById('exportBtn');
 
-        statusMessage.textContent = "";
+        // Réinitialisation de l'interface
+        statusMessage.className = "status";
+        statusMessage.textContent = "Traitement en cours...";
+        statusMessage.style.display = "block";
         tableHead.innerHTML = "";
         tableBody.innerHTML = "";
+        exportBtn.style.display = "none";
+        exportData = [];
 
         if (!mappingFileInput || !inventoryFileInput) {
-            statusMessage.textContent = "Veuillez charger les deux fichiers CSV avant de lancer le calcul.";
+            statusMessage.className = "status error";
+            statusMessage.textContent = "Veuillez charger les deux fichiers Excel (.xlsx) avant de lancer le calcul.";
             return;
         }
 
         try {
-            const mappingData = await parseCSV(mappingFileInput);
-            const inventoryData = await parseCSV(inventoryFileInput);
+            const mappingData = await readExcel(mappingFileInput);
+            const inventoryData = await readExcel(inventoryFileInput);
 
             // 1. Extraire le dictionnaire de Mapping
             const mappingDict = {};
@@ -166,18 +272,18 @@
             for (let i = 0; i < mappingData.length; i++) {
                 const row = mappingData[i];
                 if (!mappingHeaderFound) {
-                    // Recherche de l'entête
                     for (let j = 0; j < row.length; j++) {
-                        if (row[j] && row[j].trim().toUpperCase() === 'CODE ARTICLE') codeIdxMap = j;
-                        if (row[j] && row[j].trim().toUpperCase() === 'MAPPING') mappingIdxMap = j;
+                        let cellValue = String(row[j] || "").trim().toUpperCase();
+                        if (cellValue === 'CODE ARTICLE') codeIdxMap = j;
+                        if (cellValue === 'MAPPING') mappingIdxMap = j;
                     }
                     if (codeIdxMap !== -1 && mappingIdxMap !== -1) {
                         mappingHeaderFound = true;
                         continue;
                     }
                 } else {
-                    const code = row[codeIdxMap] ? row[codeIdxMap].trim() : null;
-                    const mapName = row[mappingIdxMap] ? row[mappingIdxMap].trim() : null;
+                    const code = row[codeIdxMap] ? String(row[codeIdxMap]).trim() : null;
+                    const mapName = row[mappingIdxMap] ? String(row[mappingIdxMap]).trim() : null;
                     if (code && mapName) {
                         mappingDict[code] = mapName;
                     }
@@ -188,9 +294,9 @@
             let invHeaderRowIndex = -1;
             let invHeaders = [];
             
-            // Trouver la ligne d'entête (qui contient 'Code')
             for (let i = 0; i < inventoryData.length; i++) {
-                if (inventoryData[i][0] && inventoryData[i][0].trim() === 'Code') {
+                let firstCell = String(inventoryData[i][0] || "").trim();
+                if (firstCell === 'Code') {
                     invHeaderRowIndex = i;
                     invHeaders = inventoryData[i];
                     break;
@@ -198,37 +304,38 @@
             }
 
             if (invHeaderRowIndex === -1) {
+                statusMessage.className = "status error";
                 statusMessage.textContent = "Erreur: Impossible de trouver la colonne 'Code' dans le fichier d'inventaire.";
                 return;
             }
 
-            // 3. Consolider les données
+            // Préparation de la première ligne pour l'export Excel
+            let exportHeaders = [...invHeaders];
+            exportHeaders[0] = 'Mapping (Article Global)';
+            exportData.push(exportHeaders);
+
+            // 3. Consolider les données (Logique d'origine conservée)
             const consolidatedData = {};
             
             for (let i = invHeaderRowIndex + 1; i < inventoryData.length; i++) {
                 const row = inventoryData[i];
-                const itemCode = row[0] ? row[0].trim() : null;
+                const itemCode = row[0] ? String(row[0]).trim() : null;
                 
-                // Si le code existe dans notre mapping, on le traite. Sinon, on l'ignore (règle stricte).
                 if (itemCode && mappingDict[itemCode]) {
                     const groupName = mappingDict[itemCode];
                     
-                    // Initialiser le groupe s'il n'existe pas encore
                     if (!consolidatedData[groupName]) {
                         consolidatedData[groupName] = new Array(invHeaders.length).fill(0);
-                        consolidatedData[groupName][0] = groupName; // Colonne Code/Nom
+                        consolidatedData[groupName][0] = groupName; 
                     }
 
-                    // Additionner les colonnes numériques (en sautant Code, Désignation, Nature, Pump)
                     for (let col = 1; col < row.length; col++) {
-                        // Les colonnes de texte à ne pas sommer (Désignation, Nature, Pump)
                         if (col === 1 || col === 2 || col === 3) {
                             consolidatedData[groupName][col] = "-"; 
                             continue;
                         }
                         
-                        // Parse de la valeur en remplaçant les virgules par des points pour les décimales
-                        let valText = row[col] ? row[col].replace(',', '.') : '0';
+                        let valText = String(row[col] || "0").replace(',', '.');
                         let val = parseFloat(valText);
                         
                         if (!isNaN(val)) {
@@ -238,36 +345,66 @@
                 }
             }
 
-            // 4. Générer l'affichage HTML
+            // 4. Générer l'affichage HTML et préparer les données d'export
             
-            // Création de l'entête
             let trHead = document.createElement('tr');
-            invHeaders.forEach((header, index) => {
+            exportHeaders.forEach(header => {
                 let th = document.createElement('th');
-                th.textContent = index === 0 ? 'Mapping (Article Global)' : header;
+                th.textContent = header;
                 trHead.appendChild(th);
             });
             tableHead.appendChild(trHead);
 
-            // Création du corps du tableau
+            const fragment = document.createDocumentFragment(); // Optimisation des performances DOM
+
             for (const [groupName, rowData] of Object.entries(consolidatedData)) {
                 let trBody = document.createElement('tr');
+                let rowForExport = [];
+
                 rowData.forEach((cellData, index) => {
                     let td = document.createElement('td');
-                    // Formatage des nombres à 2 décimales si c'est un flottant
+                    let finalValue = cellData;
+
                     if (typeof cellData === 'number' && index > 3) {
-                        td.textContent = cellData.toFixed(2);
-                    } else {
-                        td.textContent = cellData;
+                        // Arrondi pour l'affichage HTML
+                        finalValue = parseFloat(cellData.toFixed(2)); 
                     }
+                    
+                    td.textContent = finalValue;
                     trBody.appendChild(td);
+                    rowForExport.push(finalValue);
                 });
-                tableBody.appendChild(trBody);
+                
+                fragment.appendChild(trBody);
+                exportData.push(rowForExport); // Ajout à la variable globale pour l'export
             }
+            
+            tableBody.appendChild(fragment);
+
+            // Succès
+            statusMessage.className = "status success";
+            statusMessage.textContent = "Calcul terminé avec succès !";
+            exportBtn.style.display = "flex"; // Afficher le bouton d'export
 
         } catch (error) {
-            statusMessage.textContent = "Une erreur s'est produite lors de la lecture des fichiers : " + error.message;
+            statusMessage.className = "status error";
+            statusMessage.textContent = "Une erreur s'est produite : " + error.message;
         }
+    }
+
+    // Fonction pour exporter les données calculées en fichier Excel (.xlsx)
+    function exportToExcel() {
+        if (exportData.length === 0) return;
+
+        // Créer une feuille de calcul à partir du tableau 2D exportData
+        const worksheet = XLSX.utils.aoa_to_sheet(exportData);
+        
+        // Créer un nouveau classeur et y ajouter la feuille
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventaire Consolidé");
+        
+        // Déclencher le téléchargement du fichier
+        XLSX.writeFile(workbook, "Resultats_Inventaire_Consolide.xlsx");
     }
 </script>
 
